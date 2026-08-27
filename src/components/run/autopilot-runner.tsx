@@ -1,17 +1,5 @@
 "use client";
 
-/**
- * The autopilot runner — the thing that makes this app unattended.
- *
- * It fires the two long server actions in order (discover, then sweep and rank)
- * and refreshes the console as each finishes, so the pipeline rail beside it
- * fills in on its own. It does NOT poll: each action resolves when its work is
- * genuinely done, which is honest about progress in a way a fake progress bar
- * is not.
- *
- * The one thing it must never do is start twice. A double sweep would file the
- * same ads again and inflate the board, so the guard is a ref, not state.
- */
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { ArrowRight, RefreshCw, Radar, TriangleAlert } from "lucide-react";
@@ -25,16 +13,15 @@ import { FetchTicker } from "@/components/run/fetch-ticker";
 type Phase = "idle" | "discovering" | "collecting" | "done" | "failed";
 
 const PHASE_COPY: Record<Phase, string> = {
-  idle: "Ready to collect",
-  discovering: "Finding who advertises in your market…",
-  collecting: "Collecting their live ads and ranking them…",
-  done: "Collection finished",
+  idle: "Ready to read your competitor list",
+  discovering: "Finding advertisers for this older run…",
+  collecting: "Reading named competitors’ live ads…",
+  done: "Competitor collection finished",
   failed: "Collection stopped",
 };
 
 export function AutopilotRunner({
   runId,
-  /** What the server already knows: how far this run has actually got. */
   hasCompetitors,
   hasEvidence,
   awaitingGate,
@@ -76,16 +63,13 @@ export function AutopilotRunner({
 
       setPhase("done");
       router.refresh();
-      toast.success("Ads collected and ranked — your board is ready.");
+      toast.success("Competitor ads collected and ranked — your board is ready.");
     },
     [router, runId],
   );
 
-  // Auto-start once, on a run that has nothing yet. This is the whole point:
-  // the user pressed one button on the intake screen and nothing else.
   useEffect(() => {
-    if (started.current) return;
-    if (hasEvidence) return;
+    if (started.current || hasEvidence) return;
     started.current = true;
     void run({ fromDiscovery: !hasCompetitors });
   }, [hasCompetitors, hasEvidence, run]);
@@ -105,15 +89,13 @@ export function AutopilotRunner({
           <p className="text-[13px] leading-relaxed text-foreground/90">{PHASE_COPY[phase]}</p>
           {busy ? (
             <p className="mt-1 text-[12px] leading-relaxed text-muted-foreground">
-              Each search takes about forty seconds to load. Leave this open or come back —
-              nothing is lost if you navigate away.
+              Each advertiser takes about forty seconds to read. You can leave this page and come
+              back—your collection keeps its place.
             </p>
           ) : null}
         </div>
       </div>
 
-      {/* The counted readout. It polls only while a press is in flight, and it
-          shows ads actually read rather than a timer pretending to be one. */}
       <FetchTicker runId={runId} active={busy} className="pt-1" />
 
       {problem ? (
@@ -139,15 +121,13 @@ export function AutopilotRunner({
               void (async () => {
                 setPhase("collecting");
                 setProblem(null);
-                const result = hasEvidence
-                  ? await resweep(runId)
-                  : await autoCollect(runId);
+                const result = hasEvidence ? await resweep(runId) : await autoCollect(runId);
                 if (!result.ok) {
                   setPhase("failed");
                   setProblem(result.error);
                 } else {
                   setPhase("done");
-                  toast.success("Swept again — the board is up to date.");
+                  toast.success("Competitor ads refreshed — your board is up to date.");
                 }
                 router.refresh();
               })();
@@ -156,7 +136,7 @@ export function AutopilotRunner({
             {hasEvidence ? (
               <>
                 <RefreshCw size={14} strokeWidth={1.7} />
-                <span className="min-w-0 truncate">Sweep again</span>
+                <span className="min-w-0 truncate">Refresh competitors</span>
               </>
             ) : (
               <>

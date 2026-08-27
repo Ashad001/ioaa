@@ -1,34 +1,20 @@
 "use client";
 
-/**
- * S1 — Intake, reduced to the one thing only the user can tell us: their site.
- *
- * Everything the old form asked for — brand name, market, countries, languages,
- * media type — is DERIVED: the site is read for its own words and country
- * signals, and the market is matched from those. All of it is shown back on the
- * next screen as editable, because a derived value the user cannot correct is
- * just a guess wearing confidence.
- *
- * In the light-table world this screen is THE UNEXPOSED SHEET: an empty grid of
- * film frames waiting to be shot, with one slot to load. The frames fill in for
- * real on the next screen, so the empty grid here is a promise the app keeps
- * rather than decoration.
- */
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import { ArrowRight, ChevronDown, ScanSearch } from "lucide-react";
 import { toast } from "sonner";
 
-import { startAutoRun } from "@/app/actions/autopilot";
+import { startCompetitorRun } from "@/app/actions/competitor-run";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import { EdgeCode, Plate } from "@/components/rack/plate";
 import { ReaderStatus } from "@/components/run/reader-status";
 import { OBJECTIVES } from "@/lib/admirror/ad-library";
 import { cn } from "@/lib/utils";
 
-/** The empty sheet. Twelve frames, edge-coded, waiting to be exposed. */
 function EmptySheet({ armed }: { armed: boolean }) {
   return (
     <div aria-hidden className="grid grid-cols-4 gap-px bg-film-rebate sm:grid-cols-6">
@@ -51,11 +37,6 @@ function EmptySheet({ armed }: { armed: boolean }) {
 }
 
 export function IntakeForm({
-  /**
-   * Whether the ad reader is connected. Read on the SERVER and passed in as a
-   * boolean — the key never reaches the browser. Said here, before a run starts,
-   * because after forty seconds of a progress lamp is the wrong time to learn it.
-   */
   readerConnected = true,
 }: {
   readerConnected?: boolean;
@@ -63,6 +44,7 @@ export function IntakeForm({
   const router = useRouter();
   const [pending, startTransition] = useTransition();
   const [website, setWebsite] = useState("");
+  const [competitorNames, setCompetitorNames] = useState("");
   const [brandNameOverride, setBrandNameOverride] = useState("");
   const [objectives, setObjectives] = useState<string[]>([OBJECTIVES[0]]);
   const [advancedOpen, setAdvancedOpen] = useState(false);
@@ -78,10 +60,14 @@ export function IntakeForm({
   const submit = (event: React.FormEvent) => {
     event.preventDefault();
     startTransition(async () => {
-      const result = await startAutoRun({
+      const result = await startCompetitorRun({
         website,
         brandNameOverride,
         objectives: objectives.length > 0 ? objectives : undefined,
+        competitorNames: competitorNames
+          .split(/[\n,]/)
+          .map((name) => name.trim())
+          .filter(Boolean),
       });
       if (!result.ok) {
         toast.error(result.error);
@@ -90,6 +76,8 @@ export function IntakeForm({
       router.push(`/runs/${result.id}`);
     });
   };
+
+  const armed = website.trim().length > 2 && competitorNames.trim().length > 1;
 
   return (
     <div className="min-h-0 flex-1 overflow-y-auto">
@@ -101,44 +89,38 @@ export function IntakeForm({
         )}
 
         <div className="grid min-w-0 gap-8 lg:grid-cols-[minmax(0,1fr)_minmax(0,420px)] lg:gap-12">
-          {/* The thesis: your market's ads, laid out as a sheet you read. */}
           <div className="min-w-0">
-            <Plate className="block">Contact sheet · your market</Plate>
+            <Plate className="block">Competitor intelligence · live ads</Plate>
             <h1 className="mt-3 text-balance text-[30px] font-medium leading-[1.08] tracking-[-0.03em] sm:text-[40px]">
-              Their best angle,
+              Their live ads,
               <br />
-              your ad.
+              your next angle.
             </h1>
             <p className="mt-4 max-w-[58ch] text-[14.5px] leading-relaxed text-muted-foreground">
-              Give AdMirror your website. It reads what you sell, finds who else is really
-              advertising in your market, collects their live ads from the public Ad Library with the
-              artwork attached, and lays the lot out as a sheet you can read at a glance. You circle
-              the angle you want; it comes back as three ads of your own.
+              Start with the companies you want to study. AdMirror reads their currently observed
+              ads from the public Ad Library, keeps the creative attached, and lays them out in one
+              comparable sheet. Your website keeps the resulting angles grounded in what you sell.
             </p>
 
             <div className="mt-8 min-w-0">
               <div className="mb-2.5 flex min-w-0 items-center justify-between gap-3">
-                <Plate className="min-w-0 truncate">The sheet, before exposure</Plate>
-                <EdgeCode className="shrink-0">
-                  {website.trim() ? "loaded" : "empty"}
-                </EdgeCode>
+                <Plate className="min-w-0 truncate">The sheet, ready to load</Plate>
+                <EdgeCode className="shrink-0">{armed ? "armed" : "waiting"}</EdgeCode>
               </div>
-              <EmptySheet armed={website.trim().length > 2} />
+              <EmptySheet armed={armed} />
               <p className="mt-2.5 text-[11.5px] leading-relaxed text-muted-foreground">
-                Each frame becomes one real ad, with the picture the Library itself displays.
+                Each frame becomes one observed ad, with the creative the Library itself displays.
               </p>
             </div>
           </div>
 
-          {/* The one control. */}
           <form onSubmit={submit} className="min-w-0">
             <div className="panel lightbox min-w-0 rounded-sm p-4 sm:p-5">
-              <fieldset className="min-w-0 space-y-3">
-                <Plate as="legend">Load the sheet</Plate>
+              <fieldset className="min-w-0 space-y-4">
+                <Plate as="legend">Build your tracking list</Plate>
+
                 <div className="min-w-0 space-y-1.5">
-                  <Label htmlFor="site" className="sr-only">
-                    Your website
-                  </Label>
+                  <Label htmlFor="site">Your website</Label>
                   <Input
                     id="site"
                     required
@@ -150,8 +132,24 @@ export function IntakeForm({
                     className="h-12 font-mono text-[15px]"
                   />
                   <p className="text-[11.5px] leading-relaxed text-muted-foreground">
-                    That&rsquo;s all we need. Your brand name, your market and your category words
-                    come from the site itself — and every one is editable on the next screen.
+                    This grounds the original ad ideas in what you sell. It does not decide who we
+                    track.
+                  </p>
+                </div>
+
+                <div className="min-w-0 space-y-1.5">
+                  <Label htmlFor="competitors">Competitors to track</Label>
+                  <Textarea
+                    id="competitors"
+                    required
+                    value={competitorNames}
+                    onChange={(event) => setCompetitorNames(event.target.value)}
+                    placeholder={"ImagineArt\nHiggsfield\nRunway"}
+                    className="min-h-28 resize-y font-mono text-[14px]"
+                  />
+                  <p className="text-[11.5px] leading-relaxed text-muted-foreground">
+                    One brand per line or comma-separated. We collect directly from each advertiser,
+                    not from a broad keyword search.
                   </p>
                 </div>
               </fieldset>
@@ -162,7 +160,7 @@ export function IntakeForm({
                   onClick={() => setAdvancedOpen((value) => !value)}
                   className="plate inline-flex items-center gap-1 text-rack-engrave transition-colors duration-150 ease-out hover:text-foreground"
                 >
-                  {advancedOpen ? "Hide the optional bits" : "Optional: steer it"}
+                  {advancedOpen ? "Hide the optional bits" : "Optional: steer the output"}
                   <ChevronDown
                     size={12}
                     strokeWidth={1.8}
@@ -186,7 +184,7 @@ export function IntakeForm({
                     </div>
 
                     <div className="space-y-2">
-                      <Label>What these ads are for</Label>
+                      <Label>What your ads are for</Label>
                       <div className="flex flex-wrap gap-1.5">
                         {OBJECTIVES.map((objective) => {
                           const active = objectives.includes(objective);
@@ -217,24 +215,18 @@ export function IntakeForm({
 
               <div className="mt-5 border-t border-border/70 pt-4">
                 <Button type="submit" size="lg" disabled={pending} className="w-full">
-                  {pending ? "Reading your site…" : "Start collecting"}
+                  {pending ? "Loading competitors…" : "Collect these competitors"}
                   <ArrowRight size={15} strokeWidth={1.8} />
                 </Button>
               </div>
             </div>
 
-            {/* Expectation-setting, and the honesty line. Not a footnote. */}
             <div className="mt-4 flex min-w-0 items-start gap-3 border-l-2 border-film-edge/60 bg-film-edge/[0.06] px-3.5 py-3">
               <ScanSearch size={15} strokeWidth={1.6} className="mt-0.5 shrink-0 text-film-edge" />
               <p className="min-w-0 text-[12.5px] leading-relaxed text-foreground/85">
-                Collection runs on its own — about forty seconds per search. It reads only what the
-                public Ad Library shows anyone: the copy, the call to action, the artwork, the date
-                each ad started running, and the reach range Meta publishes on some of them.{" "}
-                <span className="text-muted-foreground">
-                  Meta publishes no spend, click or conversion figures for these ads, so AdMirror
-                  never shows one — and where it publishes no reach either, the ad says so rather
-                  than showing a zero.
-                </span>
+                Each named company is checked directly, so your board reflects the advertisers you
+                chose—not a broad list of loosely related brands. The public Ad Library supplies the
+                copy, artwork, start date and any reach range it publishes; nothing else is inferred.
               </p>
             </div>
           </form>
