@@ -1,13 +1,26 @@
 /**
- * How a submitted ad is shown on the board.
+ * A COLLECTED AD, RENDERED AS A FILM FRAME.
  *
- * The important case is the text-only one. In Browser Evidence Mode most items
- * arrive as pasted copy with no creative, and rendering those as a grey box makes
- * perfectly good evidence look like missing evidence — so a text-only ad gets a
- * deliberate typographic treatment: the copy set properly, on the rack's own
- * surface, with the CTA drawn as the button it was.
+ * Two cases matter and they are genuinely different, so they get genuinely
+ * different treatments rather than one shared grey box:
+ *
+ * 1. THE AD HAS ARTWORK. Either the picture the public Library card displayed —
+ *    referenced at the address the page itself points at, never copied — or a
+ *    screenshot the user attached. This is the case the whole product is for:
+ *    seeing the market's actual creative. It is shown as the frame's emulsion.
+ * 2. THE AD IS TEXT ONLY. Most hand-pasted items arrive this way, and rendering
+ *    those as an empty box makes perfectly good evidence look like MISSING
+ *    evidence. So text-only gets a deliberate typographic frame: the copy set
+ *    properly on emulsion, with the CTA drawn as the button it was.
+ *
+ * A referenced picture can go dead when Meta rotates its addresses, so the
+ * markup has to survive a picture that never loads — hence the frame keeps its
+ * own aspect and legend underneath whatever does or doesn't arrive.
  */
-import Image from "next/image";
+"use client";
+
+import { useState } from "react";
+import { Film, ImageOff, Play } from "lucide-react";
 
 import { Plate } from "@/components/rack/plate";
 import { cn } from "@/lib/utils";
@@ -19,6 +32,8 @@ export function AdRender({
   advertiser,
   artefactUrl,
   artefactType,
+  creativeUrl,
+  isVideo,
   modality,
   className,
 }: {
@@ -28,14 +43,19 @@ export function AdRender({
   advertiser: string;
   artefactUrl: string | null;
   artefactType: string | null;
+  /** The picture the public card displayed. A reference, not a copy. */
+  creativeUrl?: string | null;
+  isVideo?: boolean;
   modality: string;
   className?: string;
 }) {
-  const isVideo = (artefactType ?? "").startsWith("video/");
+  const [pictureFailed, setPictureFailed] = useState(false);
+  const uploadIsVideo = (artefactType ?? "").startsWith("video/");
 
-  if (artefactUrl && isVideo) {
+  // A recording the user attached themselves.
+  if (artefactUrl && uploadIsVideo) {
     return (
-      <div className={cn("relative overflow-hidden rounded-sm bg-rack-rail", className)}>
+      <div className={cn("emulsion relative overflow-hidden rounded-sm", className)}>
         <video
           src={artefactUrl}
           controls
@@ -47,17 +67,31 @@ export function AdRender({
     );
   }
 
-  if (artefactUrl) {
+  // Their own screenshot first — it is the strongest artefact we hold.
+  // Then the Library's own picture. Both are just "the frame's emulsion".
+  const picture = artefactUrl ?? creativeUrl ?? null;
+
+  if (picture && !pictureFailed) {
     return (
-      <div className={cn("relative aspect-[4/5] overflow-hidden rounded-sm bg-rack-rail", className)}>
-        <Image
-          src={artefactUrl}
-          alt={`Submitted creative${advertiser ? ` from ${advertiser}` : ""}`}
-          fill
-          sizes="(max-width: 768px) 100vw, 320px"
-          className="object-cover"
-          unoptimized
+      <div className={cn("emulsion relative overflow-hidden rounded-sm", className)}>
+        {/* A plain img, not next/image: this address belongs to Meta's CDN, is
+            rotated without notice, and must never be proxied or re-hosted. */}
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          src={picture}
+          alt={`Ad creative${advertiser ? ` from ${advertiser}` : ""}`}
+          loading="lazy"
+          decoding="async"
+          referrerPolicy="no-referrer"
+          onError={() => setPictureFailed(true)}
+          className="aspect-[4/5] w-full object-cover"
         />
+        {isVideo ? (
+          <span className="absolute bottom-2 left-2 flex items-center gap-1.5 rounded-[3px] bg-film-base/85 px-1.5 py-1 backdrop-blur-sm">
+            <Play size={10} strokeWidth={2.5} className="text-film-edge" />
+            <Plate className="text-film-edge">Video</Plate>
+          </span>
+        ) : null}
       </div>
     );
   }
@@ -67,46 +101,52 @@ export function AdRender({
   return (
     <div
       className={cn(
-        "relative flex aspect-[4/5] flex-col justify-between overflow-hidden rounded-sm border border-border/70 bg-rack-rail px-4 py-4",
+        "emulsion relative flex aspect-[4/5] flex-col justify-between overflow-hidden rounded-sm border border-border/60 px-4 py-4",
         className,
       )}
     >
-      <Plate className="text-rack-seam">
-        {modality === "text_only" ? "Copy as submitted" : "No creative captured"}
-      </Plate>
-
       {hasCopy ? (
-        <div className="min-w-0">
-          {headline.trim() ? (
-            <p className="text-balance text-[17px] font-medium leading-[1.25] tracking-[-0.02em] text-foreground">
-              {headline}
-            </p>
-          ) : null}
-          {bodyCopy.trim() ? (
-            <p
-              className={cn(
-                "mt-2 line-clamp-6 text-[12.5px] leading-relaxed text-foreground/75",
-                !headline.trim() && "text-[14px] text-foreground/90",
+        <>
+          <div className="min-w-0">
+            {headline.trim() ? (
+              <p className="line-clamp-3 text-[15px] font-medium leading-snug tracking-[-0.01em] text-foreground">
+                {headline}
+              </p>
+            ) : null}
+            {bodyCopy.trim() ? (
+              <p className="mt-2 line-clamp-6 text-[13px] leading-relaxed text-muted-foreground">
+                {bodyCopy}
+              </p>
+            ) : null}
+          </div>
+          <div className="mt-3 flex min-w-0 items-center justify-between gap-2">
+            {ctaLabel.trim() ? (
+              <span className="inline-flex shrink-0 items-center rounded-[3px] border border-border bg-secondary px-2.5 py-1 text-[11px] font-medium text-secondary-foreground">
+                {ctaLabel}
+              </span>
+            ) : (
+              <span />
+            )}
+            <span className="flex shrink-0 items-center gap-1.5">
+              {pictureFailed ? (
+                <ImageOff size={11} strokeWidth={1.75} className="text-muted-foreground" />
+              ) : (
+                <Film size={11} strokeWidth={1.75} className="text-muted-foreground" />
               )}
-            >
-              {bodyCopy}
-            </p>
-          ) : null}
-        </div>
+              <Plate className="truncate">
+                {pictureFailed ? "Artwork expired" : "Copy only"}
+              </Plate>
+            </span>
+          </div>
+        </>
       ) : (
-        <p className="text-[13px] italic leading-relaxed text-muted-foreground">
-          Neither creative nor copy was captured for this one — it&rsquo;s here as a reference only.
-        </p>
+        <div className="flex flex-1 flex-col items-center justify-center gap-2 text-center">
+          <ImageOff size={18} strokeWidth={1.5} className="text-rack-seam" />
+          <Plate className="max-w-[22ch]">
+            {modality === "partial" ? "Partly captured" : "Nothing captured yet"}
+          </Plate>
+        </div>
       )}
-
-      <div className="flex min-w-0 items-center justify-between gap-2">
-        <span className="min-w-0 truncate text-[11px] text-muted-foreground">{advertiser || "Advertiser not captured"}</span>
-        {ctaLabel ? (
-          <span className="plate shrink-0 rounded-[3px] border border-border bg-secondary px-2 py-1 text-secondary-foreground">
-            {ctaLabel}
-          </span>
-        ) : null}
-      </div>
     </div>
   );
 }

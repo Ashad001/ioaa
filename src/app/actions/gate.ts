@@ -22,6 +22,7 @@ import { angleTransfer, buildTestPlan, buildVariants, runGates, FORMAT_LABELS } 
 import {
   buildRoundedPlan,
   DEFAULT_MATRIX,
+  describeSpec,
   MATRIX_CAP,
   priceMatrix,
   type MatrixChoice,
@@ -163,6 +164,10 @@ export async function forceGeneration(input: {
           formatAxis,
           includeStatics: matrix.includeStatics,
           includeCopyVariants: matrix.includeCopyVariants,
+          spec: {
+            resolution: matrix.resolution,
+            durationSeconds: matrix.durationSeconds,
+          },
         }),
       );
 
@@ -208,6 +213,8 @@ export async function forceGeneration(input: {
           formatAxis: variant.formatAxis,
           sharedBodyKey: variant.sharedBodyKey,
           altCopy: JSON.stringify(variant.altCopy),
+          outputResolution: variant.outputResolution,
+          outputDurationSeconds: String(variant.outputDurationSeconds),
           gates: JSON.stringify({
             results: gates,
             testPlan,
@@ -229,8 +236,8 @@ export async function forceGeneration(input: {
       "MOTION",
       "done",
       statics > 0
-        ? `${generated} motion brief${generated === 1 ? "" : "s"} · ${statics} static${statics === 1 ? "" : "s"} from the same frames`
-        : "Motion brief ready to render",
+        ? `${generated} motion brief${generated === 1 ? "" : "s"} · ${statics} static${statics === 1 ? "" : "s"} · ${describeSpec(matrix)}`
+        : `Motion brief ready to render · ${describeSpec(matrix)}`,
     );
     await setStep(
       input.runId,

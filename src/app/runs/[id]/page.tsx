@@ -4,9 +4,10 @@ import { ExternalLink } from "lucide-react";
 
 import { ensureResearch } from "@/lib/admirror/ensure";
 import { AutopilotRunner } from "@/components/run/autopilot-runner";
-import { CompetitorMap } from "@/components/run/competitor-map";
+import { CompetitorMap, type SetAsideRow } from "@/components/run/competitor-map";
+import { MarketChart, type MarketAd } from "@/components/run/market-chart";
 import { RunNav } from "@/components/run/run-nav";
-import { Lamp, Panel, Plate, Readout } from "@/components/rack/plate";
+import { EdgeCode, Lamp, Panel, Plate, Readout } from "@/components/rack/plate";
 import { PaneHeader, RackShell } from "@/components/rack/shell";
 import { Button } from "@/components/ui/button";
 import { getUser } from "@/lib/auth";
@@ -19,6 +20,13 @@ type SiteRead = {
   categoryTerms?: string[];
   note?: string;
   reachable?: boolean;
+};
+
+type StoredDossier = Dossier & {
+  siteRead?: SiteRead;
+  marketNote?: string;
+  setAside?: SetAsideRow[];
+  discoveryNote?: string;
 };
 
 export default async function RunConsolePage({ params }: { params: Promise<{ id: string }> }) {
@@ -42,9 +50,9 @@ export default async function RunConsolePage({ params }: { params: Promise<{ id:
   ]);
   if (!fresh) notFound();
 
-  let dossier: (Dossier & { siteRead?: SiteRead; marketNote?: string }) | null = null;
+  let dossier: StoredDossier | null = null;
   try {
-    dossier = fresh.dossier ? JSON.parse(fresh.dossier) : null;
+    dossier = fresh.dossier ? (JSON.parse(fresh.dossier) as StoredDossier) : null;
   } catch {
     dossier = null;
   }
@@ -54,6 +62,24 @@ export default async function RunConsolePage({ params }: { params: Promise<{ id:
   const awaitingGate = fresh.status === "AWAITING_GATE";
   const siteRead = dossier?.siteRead;
   const terms = siteRead?.categoryTerms ?? [];
+  const setAside = dossier?.setAside ?? [];
+
+  // Both readings below are COUNTED off what was actually collected. Nothing here
+  // is modelled, inferred or filled in for a gap.
+  const marketAds: MarketAd[] = items.map((item) => ({
+    advertiser: item.advertiser,
+    visibleStartDate: item.visibleStartDate,
+    hasArtwork: Boolean(item.creativeUrl ?? item.artefactUrl),
+  }));
+
+  const adsByAdvertiser: Record<string, number> = {};
+  for (const item of items) {
+    const key = item.advertiser.trim().toLowerCase();
+    if (!key) continue;
+    adsByAdvertiser[key] = (adsByAdvertiser[key] ?? 0) + 1;
+  }
+
+  const withArt = marketAds.filter((ad) => ad.hasArtwork).length;
 
   return (
     <RackShell
@@ -66,30 +92,29 @@ export default async function RunConsolePage({ params }: { params: Promise<{ id:
       actions={
         hasEvidence ? (
           <Button size="sm" render={<Link href={`/runs/${id}/board`} />}>
-            <span className="min-w-0 truncate">See the board</span>
+            <span className="min-w-0 truncate">See the sheet</span>
           </Button>
         ) : null
       }
     >
       <PaneHeader
-        title="Research console"
-        hint="Collection runs on its own. You step in once, at the gate."
+        title="Your market"
+        hint="Reading runs on its own. You step in once, to pick an angle."
         actions={
           <span className="plate flex items-center gap-2 text-rack-engrave">
             <Lamp state={hasEvidence ? "done" : "hold"} pulsing={!hasEvidence} />
-            {fresh.status.replace(/_/g, " ").toLowerCase()}
+            <span className="min-w-0 truncate">
+              {fresh.status.replace(/_/g, " ").toLowerCase()}
+            </span>
           </span>
         }
       />
 
       <div className="min-h-0 flex-1 overflow-y-auto">
-        <div className="mx-auto w-full max-w-[1100px] px-4 py-6 sm:px-6">
-          <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_300px]">
+        <div className="w-full px-4 py-5 sm:px-6">
+          <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_320px]">
             <div className="min-w-0 space-y-4">
-              <Panel
-                label="Collecting"
-                aside={<span className="plate text-rack-engrave">steps 03–08</span>}
-              >
+              <Panel label="Reading the Ad Library">
                 <div className="px-4 py-4">
                   <AutopilotRunner
                     runId={id}
@@ -100,69 +125,84 @@ export default async function RunConsolePage({ params }: { params: Promise<{ id:
                 </div>
               </Panel>
 
-              {dossier?.positioning ? (
+              <Panel
+                label="Who's advertising against you"
+                aside={
+                  <EdgeCode>
+                    {competitors.filter((row) => !row.pruned).length} kept
+                  </EdgeCode>
+                }
+              >
+                <div className="px-4 py-4">
+                  <CompetitorMap
+                    runId={id}
+                    competitors={competitors}
+                    hasEvidence={hasEvidence}
+                    setAside={setAside}
+                    adsByAdvertiser={adsByAdvertiser}
+                  />
+                </div>
+              </Panel>
+
+              {hasEvidence ? (
                 <Panel
-                  label="Brand read"
-                  aside={<span className="plate text-rack-engrave">step 02</span>}
+                  label="What was collected"
+                  aside={
+                    <EdgeCode>
+                      {items.length} ads · {withArt} with artwork
+                    </EdgeCode>
+                  }
                 >
+                  <div className="px-4 py-4">
+                    <MarketChart ads={marketAds} />
+                  </div>
+                </Panel>
+              ) : null}
+
+              {dossier?.positioning ? (
+                <Panel label="What we read off your site">
                   <div className="space-y-4 px-4 py-4">
                     <p className="max-w-[65ch] text-[13.5px] leading-relaxed text-foreground/90">
                       {dossier.positioning}
                     </p>
 
-                    {siteRead?.description ? (
-                      <div className="min-w-0">
-                        <Plate className="block">What your site says</Plate>
-                        <p className="mt-1.5 max-w-[65ch] text-[13px] leading-relaxed text-foreground/85">
-                          {siteRead.description}
-                        </p>
-                      </div>
-                    ) : null}
-
                     {terms.length > 0 ? (
                       <div>
-                        <Plate className="block">Searched under</Plate>
+                        <Plate className="block">Searched under your own words</Plate>
                         <div className="mt-2 flex flex-wrap gap-1.5">
                           {terms.map((term) => (
                             <span
                               key={term}
-                              className="rounded-full border border-chart-1/40 bg-chart-1/[0.08] px-2.5 py-1 text-[12px] text-foreground/85"
+                              className="border border-film-edge/35 bg-film-edge/[0.07] px-2.5 py-1 text-[12px] text-foreground/85"
                             >
                               {term}
                             </span>
                           ))}
                         </div>
-                        <p className="mt-2 text-[11.5px] leading-relaxed text-muted-foreground">
-                          These are your site&rsquo;s own words — they&rsquo;re what found the
-                          advertisers below.
+                        <p className="mt-2 max-w-[65ch] text-[11.5px] leading-relaxed text-muted-foreground">
+                          These words found the advertisers above. Anyone who came back but
+                          didn&rsquo;t sell what you sell was set aside.
                         </p>
                       </div>
                     ) : null}
 
-                    <div>
-                      <Plate className="block">Who it&rsquo;s for</Plate>
-                      <div className="mt-2 flex flex-wrap gap-1.5">
-                        {dossier.icp.map((chip) => (
-                          <span
-                            key={chip}
-                            className="rounded-full border border-border bg-secondary/50 px-2.5 py-1 text-[12px] text-foreground/85"
-                          >
-                            {chip}
-                          </span>
-                        ))}
-                      </div>
-                    </div>
-
                     <div className="grid gap-4 sm:grid-cols-2">
                       <div className="min-w-0">
-                        <Plate className="block">Voice</Plate>
-                        <p className="mt-1.5 text-[13px] leading-relaxed text-foreground/85">
-                          {dossier.voice}
-                        </p>
+                        <Plate className="block">Who it&rsquo;s for</Plate>
+                        <div className="mt-2 flex flex-wrap gap-1.5">
+                          {dossier.icp.map((chip) => (
+                            <span
+                              key={chip}
+                              className="border border-border bg-secondary/40 px-2.5 py-1 text-[12px] text-foreground/85"
+                            >
+                              {chip}
+                            </span>
+                          ))}
+                        </div>
                       </div>
                       <div className="min-w-0">
                         <Plate className="block">Proof this market wants</Plate>
-                        <ul className="mt-1.5 space-y-1">
+                        <ul className="mt-2 space-y-1">
                           {dossier.proofShape.map((proof) => (
                             <li
                               key={proof}
@@ -170,7 +210,7 @@ export default async function RunConsolePage({ params }: { params: Promise<{ id:
                             >
                               <span
                                 aria-hidden
-                                className="mt-2 size-1 shrink-0 rounded-full bg-rack-seam"
+                                className="mt-2 size-1 shrink-0 rounded-full bg-film-edge/70"
                               />
                               <span className="min-w-0">{proof}</span>
                             </li>
@@ -179,21 +219,12 @@ export default async function RunConsolePage({ params }: { params: Promise<{ id:
                       </div>
                     </div>
 
-                    <p className="border-t border-border/70 pt-3 text-[12px] leading-relaxed text-muted-foreground">
+                    <p className="max-w-[65ch] border-t border-border/70 pt-3 text-[12px] leading-relaxed text-muted-foreground">
                       {siteRead?.note ?? dossier.basis}
                     </p>
                   </div>
                 </Panel>
               ) : null}
-
-              <Panel
-                label="Who's advertising against you"
-                aside={<span className="plate text-rack-engrave">step 03</span>}
-              >
-                <div className="px-4 py-4">
-                  <CompetitorMap runId={id} competitors={competitors} hasEvidence={hasEvidence} />
-                </div>
-              </Panel>
             </div>
 
             <div className="min-w-0 space-y-4">
@@ -210,7 +241,11 @@ export default async function RunConsolePage({ params }: { params: Promise<{ id:
                     value={objectives[0] ?? "Direct response"}
                     hint={objectives.slice(1).join(" · ") || undefined}
                   />
-                  <Readout label="Ads collected" value={String(items.length)} />
+                  <Readout
+                    label="Ads read so far"
+                    value={String(items.length)}
+                    hint={`${withArt} came back with artwork`}
+                  />
                   {fresh.brandWebsite ? (
                     <div className="min-w-0">
                       <Plate className="block">Website</Plate>
@@ -225,29 +260,26 @@ export default async function RunConsolePage({ params }: { params: Promise<{ id:
                       </a>
                     </div>
                   ) : null}
-                  {dossier?.marketNote ? (
-                    <p className="text-[11.5px] leading-relaxed text-muted-foreground">
-                      {dossier.marketNote}
-                    </p>
-                  ) : null}
                 </div>
               </Panel>
 
               <Panel label="Where this comes from">
                 <div className="px-4 py-4">
                   <p className="text-[12.5px] leading-relaxed text-foreground/85">
-                    AdMirror reads the public Meta Ad Library itself — the same pages anyone can open
-                    without an account. It takes the ad copy, the call to action and the date each ad
-                    started running.
+                    AdMirror reads the public Meta Ad Library itself — the same pages anyone can
+                    open without an account — and takes the artwork, the copy, the call to action
+                    and the date each ad started running.
                   </p>
                   <p className="mt-2.5 text-[12px] leading-relaxed text-muted-foreground">
                     Meta publishes no spend, reach or click figures for these ads, so AdMirror shows
-                    none. Every fact on your board carries a badge saying whether we read it or you
-                    did.
+                    none. Anything a search couldn&rsquo;t return is listed as a gap, never filled
+                    in.
                   </p>
-                  <p className="mt-2.5 text-[12px] leading-relaxed text-muted-foreground">
-                    Anything a search couldn&rsquo;t return is listed as a gap, never filled in.
-                  </p>
+                  {dossier?.discoveryNote ? (
+                    <p className="mt-2.5 border-t border-border/70 pt-2.5 text-[12px] leading-relaxed text-muted-foreground">
+                      {dossier.discoveryNote}
+                    </p>
+                  ) : null}
                 </div>
               </Panel>
             </div>

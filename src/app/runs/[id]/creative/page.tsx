@@ -50,14 +50,14 @@ export default async function CreativePage({ params }: { params: Promise<{ id: s
     <RackShell
       crumb={
         <span className="min-w-0 truncate">
-          {current.brandName} · {current.marketLabel} · creative
+          {current.brandName} · {current.marketLabel} · your ads
         </span>
       }
       nav={<RunNav runId={id} steps={steps} activeStep="POST" />}
       actions={
         <>
           <Button variant="ghost" size="sm" render={<Link href={`/runs/${id}/board`} />}>
-            <span className="min-w-0 truncate">Back to board</span>
+            <span className="min-w-0 truncate">Back to the sheet</span>
           </Button>
           {variants.length > 0 ? (
             <Button size="sm" render={<Link href={`/runs/${id}/deliver`} />}>
@@ -68,8 +68,8 @@ export default async function CreativePage({ params }: { params: Promise<{ id: s
       }
     >
       <PaneHeader
-        title="Your variants"
-        hint="Three hooks over one shared body. Their structure, your words."
+        title="Your ads"
+        hint="Three hooks over one shared body, built to the size and length you chose."
         actions={
           variants.length > 0 ? (
             <span className="plate text-rack-engrave">
@@ -88,14 +88,17 @@ export default async function CreativePage({ params }: { params: Promise<{ id: s
       ) : null}
 
       <div className="min-h-0 flex-1 overflow-y-auto">
-        <div className="mx-auto w-full max-w-[1240px] px-4 py-6 sm:px-6">
+        <div className="w-full px-4 py-5 sm:px-6 xl:px-8">
           {variants.length === 0 ? (
             <div className="max-w-[56ch] py-10">
               <Plate className="block">Nothing generated yet</Plate>
               <p className="mt-2 text-[13.5px] leading-relaxed text-muted-foreground">
-                Pick the angles you want on the evidence board and press Force generation.
+                Pick the frames you want on your sheet, choose a size and a length, and press
+                make.
               </p>
-              <Button className="mt-4" render={<Link href={`/runs/${id}/board`} />}>Go to the board</Button>
+              <Button className="mt-4" render={<Link href={`/runs/${id}/board`} />}>
+                Go to your sheet
+              </Button>
             </div>
           ) : (
             <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_312px]">
@@ -122,8 +125,8 @@ export default async function CreativePage({ params }: { params: Promise<{ id: s
                         ) : null}
                       </div>
                       <p className="mt-1.5 max-w-[68ch] text-[11.5px] leading-relaxed text-muted-foreground">
-                        Only the first three seconds differ between these hooks — everything from 0:02
-                        is one body, written once, so the test reads the hook and nothing else.
+                        Only the opening beat differs between these hooks — the rest is one body,
+                        written once, so the test reads the hook and nothing else.
                       </p>
                       <div className="mt-3 space-y-3">
                         {group.map((variant) => (

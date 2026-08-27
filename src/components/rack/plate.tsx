@@ -1,16 +1,19 @@
 /**
- * Rack hardware: the small physical pieces the whole interface is assembled from.
+ * Light-table hardware: the small physical pieces the whole interface is
+ * assembled from.
  *
- * The world is a broadcast control rack — anodised graphite panels, engraved
- * labels, tally lamps. These components are that vocabulary, so no screen has to
- * reinvent it, and the amber lamp colour stays reserved for actions and live
- * state rather than leaking into decoration.
+ * The world is A PHOTOGRAPHIC CONTACT SHEET ON A LIGHT TABLE — cold illuminated
+ * glass, film chips with perforated rebates and orange edge-print codes, a loupe,
+ * and a red grease pencil for the frames you choose. These components are that
+ * vocabulary, so no screen has to reinvent it: grease-pencil red stays reserved
+ * for selection and the one real action, and the amber edge code is for
+ * identifiers and measurement, never for a button.
  */
 import type { ReactNode } from "react";
 
 import { cn } from "@/lib/utils";
 
-/** An engraved panel label. Mono, tracked, small — the label on the metal. */
+/** A silkscreen legend printed on the light box's frame. */
 export function Plate({
   children,
   className,
@@ -23,6 +26,20 @@ export function Plate({
   return <Tag className={cn("plate text-rack-engrave", className)}>{children}</Tag>;
 }
 
+/**
+ * A latent edge code — the film stock's own orange printing down the rebate.
+ * Identifiers, counts and measurement live here.
+ */
+export function EdgeCode({
+  children,
+  className,
+}: {
+  children: ReactNode;
+  className?: string;
+}) {
+  return <span className={cn("edge-print", className)}>{children}</span>;
+}
+
 export type LampState = "live" | "hold" | "cold" | "alert" | "done";
 
 const LAMP_COLOR: Record<LampState, string> = {
@@ -33,7 +50,7 @@ const LAMP_COLOR: Record<LampState, string> = {
   done: "bg-lamp-live",
 };
 
-/** A tally lamp. Pulses only while something is genuinely running. */
+/** A lamp on the light box. Pulses only while something is genuinely running. */
 export function Lamp({
   state,
   pulsing = false,
@@ -58,7 +75,7 @@ export function Lamp({
   );
 }
 
-/** A rack panel: one milled graphite face with a seam at the top. */
+/** A sheet of illuminated glass, light spilling from its top seam. */
 export function Panel({
   children,
   className,
@@ -71,7 +88,7 @@ export function Panel({
   aside?: ReactNode;
 }) {
   return (
-    <section className={cn("panel rounded-sm", className)}>
+    <section className={cn("panel lightbox rounded-sm", className)}>
       {(label || aside) && (
         <header className="flex min-w-0 items-center justify-between gap-3 border-b border-border/70 px-4 py-2.5">
           {label ? <Plate className="min-w-0 truncate">{label}</Plate> : <span />}
@@ -83,20 +100,30 @@ export function Panel({
   );
 }
 
-/** A screw head — the tiny hardware detail that makes the panel read as metal. */
-export function Screw({ className }: { className?: string }) {
+/**
+ * The perforated rebate down the edge of a strip of 35mm film. Purely material —
+ * it is the thing that makes a row of frames read as film rather than as cards.
+ */
+export function Rebate({
+  className,
+  orientation = "vertical",
+}: {
+  className?: string;
+  orientation?: "vertical" | "horizontal";
+}) {
   return (
     <span
       aria-hidden
       className={cn(
-        "block size-1.5 rounded-full bg-rack-rail shadow-[inset_0_0_0_1px_var(--rack-seam)]",
+        "block shrink-0 bg-film-rebate",
+        orientation === "vertical" ? "perforated w-2.5" : "h-2.5 w-full",
         className,
       )}
     />
   );
 }
 
-/** A labelled readout: engraved caption above a tabular value. */
+/** A labelled readout: silkscreen caption above a tabular value. */
 export function Readout({
   label,
   value,
@@ -113,6 +140,38 @@ export function Readout({
       <Plate className="block truncate">{label}</Plate>
       <div className="tabular mt-1 truncate text-[15px] leading-tight text-foreground">{value}</div>
       {hint ? <div className="mt-0.5 truncate text-xs text-muted-foreground">{hint}</div> : null}
+    </div>
+  );
+}
+
+/**
+ * A big counted number — the frame counter on the box.
+ *
+ * Used for anything the app COUNTED. Never for a figure it inferred, because a
+ * number in this typeface reads as measured and that has to stay true.
+ */
+export function Counter({
+  value,
+  label,
+  live = false,
+  className,
+}: {
+  value: ReactNode;
+  label?: string;
+  live?: boolean;
+  className?: string;
+}) {
+  return (
+    <div className={cn("min-w-0", className)}>
+      <div
+        className={cn(
+          "tabular font-mono text-[26px] font-semibold leading-none tracking-[-0.02em]",
+          live ? "text-film-edge" : "text-foreground",
+        )}
+      >
+        {value}
+      </div>
+      {label ? <Plate className="mt-1.5 block truncate">{label}</Plate> : null}
     </div>
   );
 }

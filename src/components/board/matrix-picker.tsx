@@ -1,21 +1,33 @@
 "use client";
 
 /**
- * The matrix panel on the gate.
+ * WHAT GETS MADE — the spec sheet clipped to the light box before the press.
  *
- * The brief's rule is that the cost is shown BEFORE the press, not after, and
- * that the default is the smallest test that can actually be read: three hooks
- * on one shared body, plus the statics those frames give away free.
+ * Two things here are REQUIREMENTS, not preferences, and they sit at the top for
+ * that reason: the frame SIZE and the RUNTIME. Both change the brief that gets
+ * written — the size decides where the safe area is and therefore where the
+ * headline can go; the runtime sets the beat clock — so choosing them after
+ * generation would mean regenerating. The cost is shown BEFORE the press, never
+ * after.
  */
 import { Layers2, Image as ImageIcon, Type } from "lucide-react";
 
-import { Plate } from "@/components/rack/plate";
+import { EdgeCode, Plate } from "@/components/rack/plate";
 import { Switch } from "@/components/ui/switch";
-import { MATRIX_CAP, priceMatrix, type MatrixChoice } from "@/lib/admirror/matrix";
+import {
+  DURATIONS,
+  MATRIX_CAP,
+  RESOLUTIONS,
+  priceMatrix,
+  resolutionSpec,
+  type DurationKey,
+  type MatrixChoice,
+  type ResolutionKey,
+} from "@/lib/admirror/matrix";
 import { cn } from "@/lib/utils";
 
 const ROWS: {
-  key: keyof MatrixChoice;
+  key: "includeStatics" | "contrastFormat" | "includeCopyVariants";
   icon: typeof Layers2;
   label: string;
   detail: string;
@@ -30,7 +42,8 @@ const ROWS: {
     key: "contrastFormat",
     icon: Layers2,
     label: "Add the customer-filmed cut",
-    detail: "Doubles the videos. Worth it only when the same angle appears in two formats in your evidence.",
+    detail:
+      "Doubles the videos. Worth it only when the same angle appears in two formats in your evidence.",
   },
   {
     key: "includeCopyVariants",
@@ -39,6 +52,9 @@ const ROWS: {
     detail: "Text only — alternative primary text on the same angle, ready to paste.",
   },
 ];
+
+const RESOLUTION_KEYS = Object.keys(RESOLUTIONS) as ResolutionKey[];
+const DURATION_KEYS = Object.keys(DURATIONS).map(Number) as DurationKey[];
 
 export function MatrixPicker({
   choice,
@@ -50,6 +66,7 @@ export function MatrixPicker({
   angleCount: number;
 }) {
   const cost = priceMatrix(choice, angleCount);
+  const size = resolutionSpec(choice.resolution);
 
   return (
     <div className="min-w-0 rounded-sm border border-border bg-rack-rail/60">
@@ -64,6 +81,77 @@ export function MatrixPicker({
           {cost.total} of {MATRIX_CAP} assets
         </span>
       </header>
+
+      {/* The required spec: size and length. */}
+      <div className="space-y-3 border-b border-border/70 px-3.5 py-3">
+        <div className="min-w-0">
+          <div className="flex min-w-0 items-baseline justify-between gap-2">
+            <Plate className="min-w-0 truncate">Size</Plate>
+            <EdgeCode className="shrink-0">
+              {size.width}×{size.height}
+            </EdgeCode>
+          </div>
+          <div className="mt-1.5 grid grid-cols-3 gap-1.5">
+            {RESOLUTION_KEYS.map((key) => {
+              const option = RESOLUTIONS[key];
+              const active = choice.resolution === key;
+              return (
+                <button
+                  key={key}
+                  type="button"
+                  aria-pressed={active}
+                  onClick={() => onChange({ ...choice, resolution: key })}
+                  className={cn(
+                    "min-w-0 rounded-sm border px-2 py-1.5 text-left transition-colors duration-150 ease-out",
+                    active
+                      ? "border-primary bg-primary/[0.12]"
+                      : "border-border hover:border-rack-engrave",
+                  )}
+                >
+                  <span className="block truncate text-[11.5px] font-medium text-foreground">
+                    {option.label}
+                  </span>
+                  <span className="tabular block truncate text-[10.5px] text-muted-foreground">
+                    {option.ratio}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+          <p className="mt-1.5 text-[11px] leading-relaxed text-muted-foreground">{size.note}</p>
+        </div>
+
+        <div className="min-w-0">
+          <div className="flex min-w-0 items-baseline justify-between gap-2">
+            <Plate className="min-w-0 truncate">Length</Plate>
+            <EdgeCode className="shrink-0">{choice.durationSeconds}s</EdgeCode>
+          </div>
+          <div className="mt-1.5 grid grid-cols-3 gap-1.5">
+            {DURATION_KEYS.map((key) => {
+              const active = choice.durationSeconds === key;
+              return (
+                <button
+                  key={key}
+                  type="button"
+                  aria-pressed={active}
+                  onClick={() => onChange({ ...choice, durationSeconds: key })}
+                  className={cn(
+                    "tabular min-w-0 rounded-sm border px-2 py-1.5 text-[11.5px] font-medium transition-colors duration-150 ease-out",
+                    active
+                      ? "border-primary bg-primary/[0.12] text-foreground"
+                      : "border-border text-foreground/80 hover:border-rack-engrave",
+                  )}
+                >
+                  {key}s
+                </button>
+              );
+            })}
+          </div>
+          <p className="mt-1.5 text-[11px] leading-relaxed text-muted-foreground">
+            {DURATIONS[choice.durationSeconds].note}
+          </p>
+        </div>
+      </div>
 
       <div className="divide-y divide-border/60">
         {ROWS.map((row) => {

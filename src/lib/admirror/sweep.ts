@@ -7,9 +7,10 @@ import "server-only";
  *
  * 1. Everything read here is what any member of the public sees on the Ad
  *    Library page without logging in: Library ID, the visible "Started running"
- *    date, the advertiser, the ad copy, the headline, the call to action and the
- *    active/inactive label. No account, no cookie, no token, no private
- *    endpoint. If a field is not printed on that public page, it is not here.
+ *    date, the advertiser, the ad copy, the headline, the call to action, the
+ *    active/inactive label and THE CREATIVE THE PAGE ITSELF DISPLAYS. No
+ *    account, no cookie, no token, no private endpoint. If a field is not
+ *    printed on that public page, it is not here.
  * 2. There is STILL NO PERFORMANCE FIGURE, and there never will be. Meta does
  *    not publish impressions, spend, CTR or ROAS for ordinary commercial ads, so
  *    the sweep cannot produce one. The honesty rules in `provenance.ts` hold
@@ -21,10 +22,14 @@ import "server-only";
  *    that changes without notice, so every extraction is defensive and a miss
  *    produces a REPORTED GAP, never a fabricated value. A run that sweeps
  *    nothing must still be completable by hand — that path stays first-class.
+ * 4. THE PICTURES ARE REFERENCED, NEVER COPIED. We keep the picture address the
+ *    public page already points at and let the reader's own browser load it,
+ *    exactly as it would if they opened the Library themselves. Nothing is
+ *    downloaded, re-hosted, cached or stored as a file.
  *
  * The page needs JavaScript to render its cards, so the request goes through a
- * public read-through renderer that returns the rendered text of a URL. It is an
- * ordinary HTTPS GET; the app itself launches nothing.
+ * public read-through renderer that returns the rendered markup of a URL. It is
+ * an ordinary HTTPS GET; the app itself launches nothing.
  */
 
 import { buildSearchUrl, type SearchSpec } from "./ad-library";
@@ -50,6 +55,15 @@ export type SweptAd = {
   multipleVersions: boolean;
   /** Set when the card carried an EU transparency notice. */
   euTransparency: boolean;
+  /**
+   * The creative the public card displays, as the address the page itself
+   * points at. Referenced, never fetched or stored by us.
+   */
+  creativeUrl: string | null;
+  /** The advertiser's small round profile picture on the card. */
+  advertiserAvatarUrl: string | null;
+  /** True when the card's creative is a video rather than a still. */
+  isVideo: boolean;
 };
 
 export type SweepOutcome = {
@@ -68,8 +82,13 @@ export type SweepOutcome = {
 const RENDERER = "https://r.jina.ai/";
 const REQUEST_TIMEOUT_MS = 75_000;
 
-/** Fetch the RENDERED text of a public URL. Plain GET; nothing is executed here. */
-async function renderedText(url: string, waitSeconds: number): Promise<string> {
+/**
+ * Fetch the RENDERED markup of a public URL. Plain GET; nothing is launched
+ * here. We ask for markup rather than plain text specifically because the text
+ * form throws the card pictures away, and the pictures are what let someone
+ * recognise an ad at a glance instead of reading a paragraph about it.
+ */
+async function renderedHtml(url: string, waitSeconds: number): Promise<string> {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
   try {
@@ -78,8 +97,8 @@ async function renderedText(url: string, waitSeconds: number): Promise<string> {
       cache: "no-store",
       signal: controller.signal,
       headers: {
-        Accept: "text/plain",
-        "x-return-format": "text",
+        Accept: "text/html",
+        "x-return-format": "html",
         "x-timeout": String(waitSeconds),
         "x-wait-for-selector": "div[role=main]",
       },
@@ -93,37 +112,35 @@ async function renderedText(url: string, waitSeconds: number): Promise<string> {
 
 // ─── Reading the page ─────────────────────────────────────────────────────────
 
-const CTA_LABELS = new Set(
-  [
-    "shop now",
-    "learn more",
-    "sign up",
-    "book now",
-    "download",
-    "get offer",
-    "get quote",
-    "apply now",
-    "contact us",
-    "send message",
-    "send whatsapp message",
-    "subscribe",
-    "order now",
-    "watch more",
-    "play game",
-    "install now",
-    "use app",
-    "see menu",
-    "donate now",
-    "buy tickets",
-    "listen now",
-    "request time",
-    "get showtimes",
-    "get directions",
-    "call now",
-    "save",
-    "open link",
-  ],
-);
+const CTA_LABELS = new Set([
+  "shop now",
+  "learn more",
+  "sign up",
+  "book now",
+  "download",
+  "get offer",
+  "get quote",
+  "apply now",
+  "contact us",
+  "send message",
+  "send whatsapp message",
+  "subscribe",
+  "order now",
+  "watch more",
+  "play game",
+  "install now",
+  "use app",
+  "see menu",
+  "donate now",
+  "buy tickets",
+  "listen now",
+  "request time",
+  "get showtimes",
+  "get directions",
+  "call now",
+  "save",
+  "open link",
+]);
 
 /** Card chrome — text the Library prints itself, never the advertiser's copy. */
 function isChrome(line: string): boolean {
@@ -144,6 +161,7 @@ function isChrome(line: string): boolean {
       "sort",
       "sort by",
       "remove",
+      "use this creative and text",
     ].includes(lower)
   ) {
     return true;
@@ -151,6 +169,7 @@ function isChrome(line: string): boolean {
   if (/^library id/i.test(line)) return true;
   if (/^started running/i.test(line)) return true;
   if (/^\d+\s+ads?\s+use this creative/i.test(line)) return true;
+  if (/^\d+\s+ads?$/i.test(line)) return true;
   if (/^~?[\d,]+ results$/i.test(line)) return true;
   if (/^active status:/i.test(line)) return true;
   return false;
@@ -158,8 +177,58 @@ function isChrome(line: string): boolean {
 
 const DISPLAY_LINK = /^[A-Z0-9][A-Z0-9.\-]{1,44}\.[A-Z]{2,8}$/;
 
+/** Sentinel that survives tag-stripping so a picture keeps its place in a card. */
+const PIC = "\u0001PIC:";
+
+function decodeEntities(value: string): string {
+  return value
+    .replace(/&amp;/g, "&")
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">")
+    .replace(/&quot;/g, '"')
+    .replace(/&#0?39;/g, "'")
+    .replace(/&apos;/g, "'")
+    .replace(/&nbsp;/g, " ");
+}
+
 /**
- * Pull the ad cards out of the rendered page text.
+ * Reduce rendered markup to lines, keeping every card picture inline as a
+ * sentinel so it stays attached to the card it belongs to.
+ *
+ * Order matters: code and styling blocks go first, so their contents can never
+ * be mistaken for ad copy, and only then are the remaining tags replaced.
+ */
+function flatten(markup: string): string {
+  let out = markup.replace(
+    /<(script|style|svg|template|noscript)\b[\s\S]*?<\/\1>/gi,
+    " ",
+  );
+  out = out.replace(/<!--[\s\S]*?-->/g, " ");
+
+  // Keep the pictures: only ad media, and only from Meta's own content CDN.
+  out = out.replace(/<img\b[^>]*>/gi, (tag) => {
+    const quoted = tag.match(/\bsrc\s*=\s*"([^"]+)"/i) ?? tag.match(/\bsrc\s*=\s*'([^']+)'/i);
+    if (!quoted) return "\n";
+    const url = decodeEntities(quoted[1]);
+    if (!/fbcdn\.net\/v\//i.test(url)) return "\n";
+    return `\n${PIC}${url}\n`;
+  });
+
+  out = out.replace(/<[^>]+>/g, "\n");
+  return decodeEntities(out);
+}
+
+/** The 600px card creative vs the 60px avatar — the page stamps its own size. */
+function pixelWidth(url: string): number {
+  const stamped = url.match(/_?s(\d{2,4})x(\d{2,4})/);
+  if (stamped) return Number(stamped[1]);
+  const param = url.match(/[?&](?:w|width)=(\d{2,4})/);
+  if (param) return Number(param[1]);
+  return 0;
+}
+
+/**
+ * Pull the ad cards out of the rendered page.
  *
  * The anchor is "Library ID: <digits>", printed once per card, so each card's
  * slice runs from its own anchor to the next. That holds even as the markup
@@ -169,7 +238,9 @@ export function extractAds(rendered: string): {
   ads: SweptAd[];
   resultsLine: string | null;
 } {
-  const lines = rendered
+  const flat = /<[a-z!][^>]*>/i.test(rendered) ? flatten(rendered) : rendered;
+
+  const lines = flat
     .split("\n")
     .map((line) => line.replace(/\u200b/g, "").trim())
     .filter((line) => line.length > 0);
@@ -178,7 +249,16 @@ export function extractAds(rendered: string): {
 
   const anchors: number[] = [];
   for (let index = 0; index < lines.length; index += 1) {
-    if (/^library id:\s*\d{5,}/i.test(lines[index])) anchors.push(index);
+    if (/^library id:\s*\d{5,}/i.test(lines[index])) {
+      anchors.push(index);
+    } else if (
+      // Markup mode can split the label from its number across two lines.
+      /^library id:?$/i.test(lines[index]) &&
+      index + 1 < lines.length &&
+      /^\d{5,}$/.test(lines[index + 1])
+    ) {
+      anchors.push(index);
+    }
   }
   if (anchors.length === 0) return { ads: [], resultsLine };
 
@@ -188,38 +268,81 @@ export function extractAds(rendered: string): {
     const end = position + 1 < anchors.length ? anchors[position + 1] : lines.length;
     const block = lines.slice(start, end);
 
-    const libraryId = (block[0].match(/(\d{5,})/) ?? [])[1];
+    const labelled = block[0].match(/library id:\s*(\d{5,})/i);
+    const libraryId =
+      labelled?.[1] ?? (block[1] && /^\d{5,}$/.test(block[1]) ? block[1] : undefined);
     if (!libraryId) return;
 
-    const startedLine = block.find((line) => /^started running/i.test(line));
+    // Card pictures, in the order the page printed them. The big one is the
+    // creative; the small round one is the advertiser's profile picture.
+    const pictures: string[] = [];
+    block.forEach((line) => {
+      if (line.startsWith(PIC)) {
+        const url = line.slice(PIC.length).trim();
+        if (url) pictures.push(url);
+      }
+    });
+
+    let creativeUrl: string | null = null;
+    let advertiserAvatarUrl: string | null = null;
+    let widest = -1;
+    pictures.forEach((url) => {
+      const width = pixelWidth(url);
+      if (width > widest) {
+        widest = width;
+        creativeUrl = url;
+      }
+    });
+    const remaining = pictures.filter((url) => url !== creativeUrl);
+    if (remaining.length > 0) {
+      advertiserAvatarUrl = remaining.reduce((smallest, url) =>
+        pixelWidth(url) < pixelWidth(smallest) ? url : smallest,
+      );
+    }
+    // A card that only ever showed one small round picture has no creative.
+    if (creativeUrl && pictures.length === 1 && widest > 0 && widest <= 100) {
+      advertiserAvatarUrl = creativeUrl;
+      creativeUrl = null;
+    }
+
+    const textLines = block.filter((line) => !line.startsWith(PIC));
+
+    const startedLine = textLines.find((line) => /^started running/i.test(line));
     const visibleStartDate = startedLine
       ? startedLine.replace(/^started running on\s*/i, "").trim() || null
       : null;
 
     // The status label sits immediately BEFORE the Library ID on this layout, so
-    // look back one line as well as inside the block.
-    const beforeAnchor = start > 0 ? lines[start - 1] : "";
-    const statusSource = [beforeAnchor, ...block];
+    // look back a couple of lines as well as inside the block.
+    const lookback = lines.slice(Math.max(0, start - 3), start);
+    const statusSource = [...lookback, ...textLines];
     const activeStatus = statusSource.some((line) => /^active$/i.test(line))
       ? "active"
       : statusSource.some((line) => /^inactive$/i.test(line))
         ? "inactive"
         : "unknown";
 
-    const multipleVersions = block.some((line) =>
-      /this ad has multiple versions/i.test(line),
+    const multipleVersions = textLines.some(
+      (line) =>
+        /this ad has multiple versions/i.test(line) ||
+        /use this creative and text/i.test(line),
     );
-    const euTransparency = block.some((line) => /^eu transparency$/i.test(line));
+    const euTransparency = textLines.some((line) => /^eu transparency$/i.test(line));
+    const isVideo = textLines.some((line) =>
+      /^(video|play video|watch video|\d+:\d\d)$/i.test(line),
+    );
 
-    const sponsoredAt = block.findIndex((line) => /^sponsored$/i.test(line));
-    const substantive = block
+    const sponsoredAt = textLines.findIndex((line) => /^sponsored$/i.test(line));
+    const substantive = textLines
       .map((line, index) => ({ line, index }))
       .filter(
-        ({ line }) =>
-          !isChrome(line) && line.length > 1 && !/^\d+$/.test(line) && !/^https?:\/\//i.test(line),
+        (entry) =>
+          !isChrome(entry.line) &&
+          entry.line.length > 1 &&
+          !/^\d{5,}$/.test(entry.line),
       );
 
-    // Advertiser: the last substantive line before "Sponsored".
+    // The advertiser name is printed directly above "Sponsored".
     let advertiser = "";
     if (sponsoredAt >= 0) {
       const before = substantive.filter((entry) => entry.index < sponsoredAt);
@@ -266,6 +389,9 @@ export function extractAds(rendered: string): {
       resultRank: position + 1,
       multipleVersions,
       euTransparency,
+      creativeUrl,
+      advertiserAvatarUrl,
+      isVideo,
     });
   });
 
@@ -298,7 +424,7 @@ export async function sweepSearch(
   const started = Date.now();
 
   try {
-    const rendered = await renderedText(url, options.waitSeconds ?? 40);
+    const rendered = await renderedHtml(url, options.waitSeconds ?? 40);
     const elapsedMs = Date.now() - started;
 
     if (looksBlocked(rendered)) {
@@ -331,13 +457,16 @@ export async function sweepSearch(
       };
     }
 
+    const withArt = ads.filter((ad) => ad.creativeUrl).length;
     return {
       ok: true,
       url,
       ads,
       blocked: false,
       resultsLine,
-      note: `${ads.length} ad${ads.length === 1 ? "" : "s"} read from the public Library`,
+      note: `${ads.length} ad${ads.length === 1 ? "" : "s"} read from the public Library${
+        withArt > 0 ? `, ${withArt} with artwork` : ""
+      }`,
       elapsedMs,
     };
   } catch (error) {
@@ -360,7 +489,13 @@ export async function sweepSearch(
 /** Sweep several searches, a couple at a time, never in parallel enough to hammer. */
 export async function sweepMany(
   specs: SearchSpec[],
-  options: { concurrency?: number; limit?: number; waitSeconds?: number } = {},
+  options: {
+    concurrency?: number;
+    limit?: number;
+    waitSeconds?: number;
+    /** Called as each search lands, so the console can count ads as they arrive. */
+    onSettled?: (index: number, outcome: SweepOutcome) => void | Promise<void>;
+  } = {},
 ): Promise<SweepOutcome[]> {
   const lanes = Math.max(1, Math.min(options.concurrency ?? 2, 3));
   const results: SweepOutcome[] = new Array(specs.length);
@@ -371,10 +506,12 @@ export async function sweepMany(
       const index = cursor;
       cursor += 1;
       if (index >= specs.length) return;
-      results[index] = await sweepSearch(specs[index], {
+      const outcome = await sweepSearch(specs[index], {
         limit: options.limit,
         waitSeconds: options.waitSeconds,
       });
+      results[index] = outcome;
+      if (options.onSettled) await options.onSettled(index, outcome);
     }
   }
 

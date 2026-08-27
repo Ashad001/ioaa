@@ -11,9 +11,10 @@ import { useState } from "react";
 import { Check, Copy, ShieldAlert, ShieldCheck } from "lucide-react";
 import { toast } from "sonner";
 
-import { Lamp, Plate } from "@/components/rack/plate";
+import { EdgeCode, Lamp, Plate } from "@/components/rack/plate";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { resolutionSpec, type ResolutionKey } from "@/lib/admirror/matrix";
 import type { GateResult, TestPlan } from "@/lib/admirror/generate";
 import type { VariantRow } from "@/lib/admirror/queries";
 import { cn } from "@/lib/utils";
@@ -58,6 +59,10 @@ export function VariantPanel({ variant }: { variant: VariantRow }) {
   const results = gates.results ?? [];
   const blocked = variant.state === "blocked";
   const isStatic = variant.assetKind === "static";
+  // The delivery spec travels with the asset: a brief without a frame size and a
+  // runtime is a brief the buyer has to finish themselves.
+  const size = resolutionSpec(variant.outputResolution as ResolutionKey);
+  const seconds = Number(variant.outputDurationSeconds) || 0;
   const altCopy: string[] = (() => {
     try {
       return variant.altCopy ? (JSON.parse(variant.altCopy) as string[]) : [];
@@ -107,6 +112,39 @@ export function VariantPanel({ variant }: { variant: VariantRow }) {
         <p className="text-balance text-[16px] font-medium leading-[1.3] tracking-[-0.02em]">
           {variant.hookLine}
         </p>
+
+        {/* Built to spec — stamped where nobody can miss it. */}
+        <dl className="mt-3.5 flex min-w-0 flex-wrap items-center gap-x-5 gap-y-2 rounded-sm border border-border bg-rack-rail/60 px-3.5 py-2.5">
+          <div className="min-w-0">
+            <dt className="plate block truncate text-rack-engrave">Build at</dt>
+            <dd className="mt-0.5">
+              <EdgeCode>
+                {size.width}×{size.height}
+              </EdgeCode>
+              <span className="ml-1.5 text-[11px] text-muted-foreground">
+                {size.ratio} · {size.label}
+              </span>
+            </dd>
+          </div>
+          <div className="min-w-0">
+            <dt className="plate block truncate text-rack-engrave">Runtime</dt>
+            <dd className="mt-0.5">
+              {isStatic ? (
+                <span className="text-[12px] text-foreground/85">still frame</span>
+              ) : (
+                <EdgeCode>{seconds}s</EdgeCode>
+              )}
+            </dd>
+          </div>
+          <div className="min-w-0 flex-1">
+            <dt className="plate block truncate text-rack-engrave">Safe area</dt>
+            <dd className="mt-0.5 min-w-0 truncate text-[11.5px] text-muted-foreground">
+              {size.ratio === "9:16"
+                ? "Keep text clear of the top and bottom 14%"
+                : "Keep text inside a 6% margin all round"}
+            </dd>
+          </div>
+        </dl>
 
         <Tabs defaultValue="copy" className="mt-4">
           <TabsList className="grid w-full grid-cols-3">

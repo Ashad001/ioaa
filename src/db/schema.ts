@@ -335,6 +335,21 @@ export const evidenceItem = pgTable(
     /** quarantined · clear — an upload is analysable only once cleared. */
     artefactScan: text("artefact_scan"),
 
+    /**
+     * THE PICTURE THE PUBLIC CARD SHOWS.
+     *
+     * This is the address the Ad Library page itself points at — we keep the
+     * reference and let the reader's own browser load it, exactly as it would if
+     * they opened the Library. Nothing is downloaded or re-hosted, so this is a
+     * pointer, never a copy, and it can go dead when Meta rotates it. The UI
+     * must therefore survive a picture that fails to load.
+     */
+    creativeUrl: text("creative_url"),
+    /** The advertiser's small round profile picture from the same card. */
+    advertiserAvatarUrl: text("advertiser_avatar_url"),
+    /** True when the card's creative was a video rather than a still. */
+    isVideo: boolean("is_video").notNull().default(false),
+
     /** Model reading of the ad's structure, JSON text. */
     teardown: text("teardown"),
     /** Concept cluster key — repeated angles group under one card. */
@@ -400,6 +415,38 @@ export const gateDecision = pgTable(
   (t) => [index("gate_decision_run_idx").on(t.runId)],
 );
 
+/**
+ * THE LIVE FETCH TICKER — one row per run, rewritten as the sweep progresses.
+ *
+ * The count on screen while ads are being read has to be a real count of ads
+ * actually read, not a bar that fills on a timer. Progress theatre is a lie with
+ * a friendly face: it tells the user the machine is fine at the exact moment it
+ * may have stalled. So the collector writes here after EVERY search settles, and
+ * the console reads it back.
+ */
+export const sweepProgress = pgTable("sweep_progress", {
+  runId: text("run_id")
+    .primaryKey()
+    .references(() => run.id, { onDelete: "cascade" }),
+  /** discovering · reading · filing · scoring · done · idle */
+  phase: text("phase").notNull().default("idle"),
+  /** Searches finished / searches in this press. */
+  searchesDone: text("searches_done").notNull().default("0"),
+  searchesTotal: text("searches_total").notNull().default("0"),
+  /** Ads READ off the public pages so far this press. */
+  adsFound: text("ads_found").notNull().default("0"),
+  /** Ads that were new to the board (the rest were already filed). */
+  adsNew: text("ads_new").notNull().default("0"),
+  /** Ads whose card carried real artwork. */
+  adsWithArt: text("ads_with_art").notNull().default("0"),
+  /** The competitor whose search is being read right now. */
+  currentLabel: text("current_label").notNull().default(""),
+  /** JSON text: [{label, ads, state}] — one entry per settled search. */
+  perSearch: text("per_search").notNull().default("[]"),
+  startedAt: timestamp("started_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+});
+
 /** A generated variant: script, first frame prompt, captions, gate results. */
 export const creativeVariant = pgTable(
   "creative_variant",
@@ -440,6 +487,12 @@ export const creativeVariant = pgTable(
     sharedBodyKey: text("shared_body_key").notNull().default(""),
     /** JSON text: alternative primary-text options for this cell. */
     altCopy: text("alt_copy").notNull().default("[]"),
+    /**
+     * THE DELIVERY SPEC, stamped on the asset rather than assumed.
+     * `1080x1920` etc., and the runtime in seconds (0 for a static).
+     */
+    outputResolution: text("output_resolution").notNull().default("1080x1920"),
+    outputDurationSeconds: text("output_duration_seconds").notNull().default("9"),
     /** JSON text: similarity, brand, safety gate results. */
     gates: text("gates").notNull().default("{}"),
     /** queued · writing · rendering · ready · blocked */

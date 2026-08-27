@@ -44,6 +44,11 @@ import {
   type ScoreItem,
 } from "@/lib/admirror/scoring";
 import { sweepMany, type SweptAd } from "@/lib/admirror/sweep";
+import {
+  advanceProgress,
+  beginProgress,
+  setProgressPhase,
+} from "@/lib/admirror/progress";
 
 export type ActionResult = { ok: true; id?: string } | { ok: false; error: string };
 
@@ -172,10 +177,19 @@ export async function autoResearch(runId: string): Promise<ActionResult> {
 
     let siteTerms: string[] = [];
     let siteNote = "";
+    // The site's own words are the yardstick the market test measures every
+    // candidate against, so they travel with the terms rather than being thrown
+    // away after the terms are derived.
+    let siteTitle = "";
+    let siteDescription = "";
+    let siteHeadings: string[] = [];
     try {
       const stored = current.dossier ? JSON.parse(current.dossier) : null;
       siteTerms = stored?.siteRead?.categoryTerms ?? [];
       siteNote = stored?.siteRead?.note ?? "";
+      siteTitle = stored?.siteRead?.title ?? "";
+      siteDescription = stored?.siteRead?.description ?? "";
+      siteHeadings = stored?.siteRead?.headings ?? [];
     } catch {
       siteTerms = [];
     }
@@ -185,6 +199,9 @@ export async function autoResearch(runId: string): Promise<ActionResult> {
       const site = await readSite(current.brandWebsite);
       siteTerms = site.categoryTerms;
       siteNote = site.note;
+      siteTitle = site.title;
+      siteDescription = site.description;
+      siteHeadings = site.headings.slice(0, 12);
     }
 
     const objectives = current.objectives.split(",").filter(Boolean);
@@ -215,6 +232,7 @@ export async function autoResearch(runId: string): Promise<ActionResult> {
 
     // ── Step 3: competitor DISCOVERY — sweep the category, see who shows up.
     await setStep(runId, "COMPETITOR_MAP", "running", "Searching the Ad Library for your category");
+    await beginProgress(runId, "discovering", siteTerms.length, siteTerms[0] ?? "");
 
     const countries = current.marketCountries.split(",").filter(Boolean);
     const languages = current.marketLanguages.split(",").filter(Boolean);
@@ -227,6 +245,22 @@ export async function autoResearch(runId: string): Promise<ActionResult> {
       country: primaryCountry,
       language: primaryLanguage,
       mediaType: current.mediaType,
+      siteTitle,
+      siteDescription,
+      siteHeadings,
+      onTermSettled: async (term, adsRead, index) => {
+        await advanceProgress(
+          runId,
+          {
+            label: term,
+            ads: adsRead,
+            state: adsRead > 0 ? "ok" : "empty",
+            newAds: adsRead,
+            withArt: 0,
+          },
+          siteTerms[index + 1] ?? "",
+        );
+      },
     });
 
     // Replace any previous auto map, keep anything the user added by hand.
@@ -256,6 +290,32 @@ export async function autoResearch(runId: string): Promise<ActionResult> {
 
     if (rows.length > 0) await db.insert(competitor).values(rows);
 
+    // Keep the rejections WITH their reasons. A filter the user cannot inspect is
+    // indistinguishable from a bug, and "why isn't X here?" is the first question
+    // anyone asks of a competitor map.
+    try {
+      const stored = current.dossier ? JSON.parse(current.dossier) : {};
+      await db
+        .update(run)
+        .set({
+          dossier: JSON.stringify({
+            ...stored,
+            ...dossier,
+            categoryTerms: siteTerms,
+            setAside: discovery.rejected.map((verdict) => ({
+              name: verdict.name,
+              reason: verdict.reason,
+            })),
+            discoveryNote: discovery.note,
+          }),
+          updatedAt: new Date(),
+        })
+        .where(eq(run.id, runId));
+    } catch {
+      // A dossier we cannot parse is not worth failing a run over.
+    }
+
+    await setProgressPhase(runId, "done", `${rows.length} advertisers found`);
     await setStep(
       runId,
       "COMPETITOR_MAP",
@@ -402,10 +462,44 @@ export async function autoCollect(runId: string): Promise<ActionResult> {
       activeStatus: row.activeStatus,
     }));
 
+    // The ticker starts before the first request, so the console can show the
+    // real denominator ("reading 6 searches") the instant the press begins.
+    await beginProgress(
+      runId,
+      "reading",
+      slice.length,
+      slice[0]?.competitorName ?? "",
+    );
+
     const outcomes = await sweepMany(specs, {
       concurrency: SWEEP_LANES,
       limit: ADS_PER_SEARCH,
+      // Every count on screen is counted from a page that actually came back.
+      onSettled: async (index, outcome) => {
+        const search = slice[index];
+        await advanceProgress(
+          runId,
+          {
+            label: search.competitorName,
+            ads: outcome.ads.length,
+            state: outcome.blocked
+              ? "blocked"
+              : !outcome.ok
+                ? "failed"
+                : outcome.ads.length === 0
+                  ? "empty"
+                  : "ok",
+            // "New" is settled properly below, against the whole board; here it
+            // is only what this page contributed, which is what a live count is.
+            newAds: outcome.ads.length,
+            withArt: outcome.ads.filter((ad) => ad.creativeUrl).length,
+          },
+          slice[index + 1]?.competitorName ?? "",
+        );
+      },
     });
+
+    await setProgressPhase(runId, "filing");
 
     // Which Library IDs are already on the board? Never file one twice.
     const already = await db
@@ -518,6 +612,7 @@ export async function autoCollect(runId: string): Promise<ActionResult> {
         .update(run)
         .set({ status: "AWAITING_EVIDENCE", updatedAt: new Date() })
         .where(eq(run.id, runId));
+      await setProgressPhase(runId, "done", "nothing could be read");
       revalidatePath(`/runs/${runId}`);
       revalidatePath(`/runs/${runId}/collect`);
       return {
@@ -560,6 +655,7 @@ export async function autoCollect(runId: string): Promise<ActionResult> {
         await analyse(runId, targetBatch.id);
       }
 
+      await setProgressPhase(runId, "done", "no new ads since last sweep");
       revalidatePath(`/runs/${runId}`);
       revalidatePath(`/runs/${runId}/collect`);
       revalidatePath(`/runs/${runId}/board`);
@@ -575,13 +671,16 @@ export async function autoCollect(runId: string): Promise<ActionResult> {
         : `${collected} ads collected from ${slice.length} searches`,
     );
 
+    await setProgressPhase(runId, "scoring", `${collected} ads collected`);
     await analyse(runId, targetBatch.id);
+    await setProgressPhase(runId, "done", `${collected} ads collected`);
 
     revalidatePath(`/runs/${runId}`);
     revalidatePath(`/runs/${runId}/collect`);
     revalidatePath(`/runs/${runId}/board`);
     return { ok: true };
   } catch (error) {
+    await setProgressPhase(runId, "done", "the sweep stopped early");
     return fail(error);
   }
 }
@@ -604,7 +703,11 @@ function sweptToEvidence(
     runId: context.runId,
     searchReferenceId: context.searchReferenceId,
     intakeKind: "url",
-    modality: ad.bodyCopy && ad.headline ? "full" : "partial",
+    modality: ad.creativeUrl
+      ? "full"
+      : ad.bodyCopy && ad.headline
+        ? "text_only"
+        : "partial",
 
     advertiser: ad.advertiser,
     advertiserProvenance: ad.advertiser ? swept : "unknown",
@@ -626,6 +729,12 @@ function sweptToEvidence(
     visibleStartDateProvenance: ad.visibleStartDate ? swept : "unknown",
     visibleResultRank: String(ad.resultRank),
     visibleResultRankProvenance: swept,
+    // The picture the public card displays — kept as the address the Library
+    // itself points at, so the reader's browser loads it exactly as it would on
+    // the real page. A reference, never a copy.
+    creativeUrl: ad.creativeUrl,
+    advertiserAvatarUrl: ad.advertiserAvatarUrl,
+    isVideo: ad.isVideo,
     market: context.market,
     language: context.language,
     observedAt: context.observedAt,

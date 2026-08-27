@@ -13,6 +13,38 @@
  * says so plainly in the UI; nothing shows a fake rendered asset.
  */
 import { deriveTeardown, type Teardown } from "./pipeline";
+import {
+  DEFAULT_MATRIX,
+  durationSpec,
+  resolutionSpec,
+  type DurationKey,
+  type ResolutionKey,
+} from "./matrix";
+
+/**
+ * THE DELIVERY SPEC travels with every cell.
+ *
+ * The frame size decides where the safe area is and therefore where the headline
+ * can sit; the runtime decides the beat clock. Writing a script without both is
+ * how a brief ends up unusable, so they are required inputs here rather than
+ * decoration added at the end.
+ */
+export type DeliverySpec = {
+  resolution: ResolutionKey;
+  durationSeconds: DurationKey;
+};
+
+/** Beat times spread across the ACTUAL runtime, never a fixed two-second grid. */
+function beatClock(durationSeconds: number, beatCount: number): string[] {
+  const count = Math.max(1, beatCount);
+  return Array.from({ length: count }, (_, index) => {
+    const at = Math.round((durationSeconds / count) * index * 10) / 10;
+    const whole = Math.floor(at);
+    const tenth = Math.round((at - whole) * 10);
+    const stamp = `0:${String(whole).padStart(2, "0")}`;
+    return tenth === 0 ? stamp : `${stamp}.${tenth}`;
+  });
+}
 
 export type AngleBrief = {
   angle: string;
@@ -87,6 +119,10 @@ export type HookVariant = {
   sharedBodyKey: string;
   /** Alternative primary texts. Text costs nothing, so the buyer gets ammunition. */
   altCopy: string[];
+  /** The size this asset is built to — pixels, not a vague "vertical". */
+  outputResolution: ResolutionKey;
+  /** The runtime it is cut to, in seconds. Statics carry 0. */
+  outputDurationSeconds: number;
 };
 
 const HOOK_SHAPES = [
@@ -165,13 +201,25 @@ export function buildVariants(input: {
   formatAxis?: "primary" | "contrast";
   includeStatics?: boolean;
   includeCopyVariants?: boolean;
+  /** Required in practice — defaulted only so older callers still compile. */
+  spec?: DeliverySpec;
 }): HookVariant[] {
   const { brief, brandName, marketLabel } = input;
   const cta = input.ctaLabel || "Shop now";
   const formatAxis = input.formatAxis ?? "primary";
   const format = FORMAT_SHAPES[formatAxis];
+  const spec: DeliverySpec = input.spec ?? {
+    resolution: DEFAULT_MATRIX.resolution,
+    durationSeconds: DEFAULT_MATRIX.durationSeconds,
+  };
+  const size = resolutionSpec(spec.resolution);
+  const runtime = durationSpec(spec.durationSeconds);
+  const seconds = spec.durationSeconds;
   // One body per angle × format — never one per hook. This key is the proof.
   const sharedBodyKey = `${brief.inheritedFromItemId}::${formatAxis}`;
+
+  const clock = beatClock(seconds, brief.beatOrder.length);
+  const hookOut = clock[1] ?? `0:0${Math.max(1, Math.round(seconds / 3))}`;
 
   const videos: HookVariant[] = HOOK_SHAPES.map((shape, index) => {
     const hookLine = shape.line(brandName, brief.angle, brief.objection);
@@ -182,7 +230,7 @@ export function buildVariants(input: {
       hookLine,
       script: {
         beats: brief.beatOrder.map((beat, beatIndex) => ({
-          at: `0:0${beatIndex * 2}`,
+          at: clock[beatIndex] ?? "0:00",
           onScreen:
             beatIndex === 0
               ? hookLine
@@ -192,18 +240,21 @@ export function buildVariants(input: {
               ? hookLine
               : `${beat}: keep it to eight words, ${brief.brandVoice.split(".")[0].toLowerCase()}`,
         })),
-        retentionNote:
-          "Hook lands before 0:02, the objection is answered by 0:06, and the ask arrives while the promise is still on screen. Only beat one differs between the hooks in this format — everything from 0:02 is the shared body.",
+        retentionNote: `Cut to ${seconds} seconds at ${size.width}×${size.height} (${size.ratio}). The hook is out by ${hookOut} and the ask arrives while the promise is still on screen. Only beat one differs between the hooks in this format — everything after ${hookOut} is the shared body. ${runtime.note}`,
       },
       firstFramePrompt: [
         `Advertising photograph for ${brandName}, ${marketLabel} market.`,
+        `Output ${size.width}×${size.height} pixels, ${size.ratio}.`,
         `${shape.frame}. ${format.frameNote}.`,
         `Composition leaves the upper third clear for the headline: “${hookLine}”.`,
+        spec.resolution === "1080x1920"
+          ? "Keep every element out of the top and bottom 14% of frame — those bands are covered by the platform's own interface."
+          : "Keep type inside a 6% margin on every edge.",
         "Realistic optics, 50mm, f/2.8, natural colour, no logos or marks other than the brand's own.",
         "No competitor marks, no borrowed trade dress, no recognisable third-party talent.",
         "The hook shot ends on the shared body's opening frame, so the cut is invisible.",
       ].join(" "),
-      motionPrompt: `${shape.motion}. ${format.motionNote}. Subject stays in the calm zone; no camera move fights the on-screen text. Colour-match to the shared body before the cut at 0:02.`,
+      motionPrompt: `${seconds}-second cut at ${size.width}×${size.height} (${size.ratio}). ${shape.motion}. ${format.motionNote}. Subject stays in the calm zone; no camera move fights the on-screen text. Colour-match to the shared body before the cut at ${hookOut}.`,
       primaryText: [
         hookLine,
         "",
@@ -217,6 +268,8 @@ export function buildVariants(input: {
       formatAxis,
       sharedBodyKey,
       altCopy: input.includeCopyVariants ? altCopyFor({ brief, brandName, hookLine, cta }) : [],
+      outputResolution: spec.resolution,
+      outputDurationSeconds: seconds,
     };
   });
 
@@ -229,8 +282,8 @@ export function buildVariants(input: {
     hookLabel: `${video.hookLabel} · static`,
     assetKind: "static",
     testRole: "Static companion — the opening frame with the headline burned in",
-    motionPrompt:
-      "No motion. This is the opening frame you already have, with the headline set into the clear upper third.",
+    motionPrompt: `No motion. Export the opening frame at ${size.width}×${size.height} (${size.ratio}) with the headline set into the clear upper third.`,
+    outputDurationSeconds: 0,
     script: {
       beats: [
         {
@@ -239,8 +292,7 @@ export function buildVariants(input: {
           vo: "No voiceover. The headline and the frame carry the whole argument.",
         },
       ],
-      retentionNote:
-        "A static reuses the video's opening frame, so it costs nothing extra to produce and still wins a real share of tests.",
+      retentionNote: `A static reuses the video's opening frame at ${size.width}×${size.height}, so it costs nothing extra to produce and still wins a real share of tests.`,
     },
   }));
 

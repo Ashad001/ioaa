@@ -8,8 +8,9 @@
  */
 import { ExternalLink } from "lucide-react";
 
+import { AdRender } from "@/components/rack/ad-render";
 import { Metric } from "@/components/rack/metric";
-import { Plate } from "@/components/rack/plate";
+import { EdgeCode, Plate } from "@/components/rack/plate";
 import {
   Sheet,
   SheetContent,
@@ -75,6 +76,40 @@ export function TeardownDrawer({
         </SheetHeader>
 
         <div className="space-y-5 px-5 py-5">
+          {/* The frame itself, first: the teardown is a reading OF something, and
+              the something has to be on screen next to the reading. */}
+          <section className="min-w-0">
+            <div className="mx-auto max-w-[300px]">
+              <AdRender
+                headline={item.headline}
+                bodyCopy={item.bodyCopy}
+                ctaLabel={item.ctaLabel}
+                advertiser={item.advertiser}
+                artefactUrl={item.artefactUrl}
+                artefactType={item.artefactType}
+                creativeUrl={item.creativeUrl}
+                isVideo={item.isVideo}
+                modality={item.modality}
+              />
+            </div>
+            {item.libraryUrl ? (
+              <p className="mt-2 flex min-w-0 items-center justify-center gap-2">
+                <EdgeCode className="shrink-0">
+                  {item.libraryUrl.match(/[?&]id=(\d+)/)?.[1] ?? "no id"}
+                </EdgeCode>
+                <a
+                  href={item.libraryUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex shrink-0 items-center gap-1 text-[11.5px] text-muted-foreground transition-colors hover:text-foreground"
+                >
+                  Check it on the real page
+                  <ExternalLink size={10} strokeWidth={1.8} />
+                </a>
+              </p>
+            ) : null}
+          </section>
+
           {/* Fields and their provenance */}
           <section>
             <Plate className="block">What was captured</Plate>

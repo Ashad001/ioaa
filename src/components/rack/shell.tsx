@@ -1,9 +1,9 @@
 /**
- * The rack frame: the chassis every screen mounts into.
+ * The light box: the chassis every screen mounts into.
  *
  * Fills the viewport edge to edge — this is a tool someone keeps open all day
- * beside their ad account, not a page that sits centred on a mat. The reading
- * column is capped inside the panes instead.
+ * beside their ad account, not a page sitting centred on a mat. Reading columns
+ * are capped INSIDE the panes instead.
  */
 import Link from "next/link";
 import type { ReactNode } from "react";
@@ -26,7 +26,7 @@ export function RackShell({
     <div className="flex min-h-dvh flex-col bg-background lg:h-dvh lg:min-h-0 lg:overflow-hidden">
       <header className="milled sticky top-0 z-40 flex h-12 shrink-0 items-center gap-4 border-b border-border bg-rack-rail/95 px-3 backdrop-blur-sm sm:px-4">
         <Link href="/library" className="flex shrink-0 items-center gap-2.5">
-          <span className="flex size-6 items-center justify-center rounded-[3px] border border-primary/45 bg-primary/12">
+          <span className="perforated flex size-6 items-center justify-center rounded-[2px] border border-film-edge/40 bg-film-base">
             <Lamp state="hold" />
           </span>
           <span className="plate hidden text-foreground sm:inline">AdMirror</span>
@@ -46,7 +46,7 @@ export function RackShell({
 
       <div className="flex min-h-0 flex-1 flex-col lg:flex-row">
         {nav ? (
-          <aside className="w-full shrink-0 border-b border-border bg-sidebar lg:w-[248px] lg:border-b-0 lg:border-r">
+          <aside className="w-full min-w-0 shrink-0 border-b border-border bg-sidebar lg:w-[248px] lg:border-b-0 lg:border-r">
             {nav}
           </aside>
         ) : null}
@@ -101,7 +101,7 @@ export function SourceModeNotice({
   return (
     <div
       className={cn(
-        "flex min-w-0 items-start gap-3 border-b border-primary/25 bg-primary/[0.07] px-4 py-3 sm:px-6",
+        "flex min-w-0 items-start gap-3 border-b border-film-edge/25 bg-film-edge/[0.06] px-4 py-3 sm:px-6",
         className,
       )}
     >

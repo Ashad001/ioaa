@@ -1,17 +1,20 @@
 "use client";
 
 /**
- * S3 — the collection workspace.
+ * THE LIGHT TABLE — three panes over one collection.
  *
- * WHAT CHANGED AND WHY. This used to be a capture tool: the user's job was to
- * open searches and type ads in. Collection is now automatic, so this screen's
- * job is REVIEW — see what the sweep brought back, spot what it missed, and add
- * anything by hand.
+ * Left: where the ads came from (the searches, each with the lamp that says what
+ * its last sweep actually did). Middle: the contact sheet itself. Right: how
+ * complete the record is, and the charts counted straight off it.
  *
  * The manual composer stays fully functional and is NOT hidden away as legacy.
  * The sweep is best-effort: a blocked search, a small market or a page that
  * changed shape all leave real gaps, and the only honest answer to a gap is a
  * first-class way to fill it yourself.
+ *
+ * Height: every pane is a child of the same grid, so every pane uses `h-full` —
+ * mixing `h-full` on one and `flex-1` on the next is exactly how one column
+ * reaches the bottom of the screen and its neighbour stops halfway.
  */
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
@@ -24,7 +27,9 @@ import { CaptureComposer } from "@/components/collect/capture-composer";
 import { CapturedList } from "@/components/collect/captured-list";
 import { SavedSearches } from "@/components/collect/saved-searches";
 import { CoverageMeter } from "@/components/rack/coverage";
-import { Plate } from "@/components/rack/plate";
+import { EdgeCode, Plate } from "@/components/rack/plate";
+import { FetchTicker } from "@/components/run/fetch-ticker";
+import { MarketChart } from "@/components/run/market-chart";
 import { Button } from "@/components/ui/button";
 import type { CoverageResult } from "@/lib/admirror/scoring";
 import type { BatchRow, EvidenceRow, RunRow, SearchRow } from "@/lib/admirror/queries";
@@ -45,16 +50,18 @@ export function CollectWorkspace({
 }) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
+  const [sweeping, setSweeping] = useState(false);
   const [activeSearchId, setActiveSearchId] = useState<string | null>(searches[0]?.id ?? null);
-  const [composerOpen, setComposerOpen] = useState(items.length === 0);
+  const [composerOpen, setComposerOpen] = useState(false);
 
   const activeSearch = searches.find((row) => row.id === activeSearchId) ?? null;
   const sweptCount = items.filter(
     (item) => item.libraryUrlProvenance === "swept_from_public_library",
   ).length;
+  const withArt = items.filter((item) => Boolean(item.artefactUrl || item.creativeUrl)).length;
 
   return (
-    <div className="grid min-h-0 flex-1 grid-cols-1 lg:grid-cols-[280px_minmax(0,1fr)_296px]">
+    <div className="grid min-h-0 flex-1 grid-cols-1 lg:grid-cols-[268px_minmax(0,1fr)_312px]">
       <div className="flex min-w-0 flex-col border-b border-border bg-card/30 lg:h-full lg:min-h-0 lg:border-b-0 lg:border-r">
         <SavedSearches
           runId={run.id}
@@ -67,13 +74,17 @@ export function CollectWorkspace({
       <div className="flex min-w-0 flex-col lg:h-full lg:min-h-0">
         <div className="flex min-w-0 flex-wrap items-center justify-between gap-3 border-b border-border px-4 py-2.5">
           <div className="min-w-0">
-            <Plate className="block">Collected ads</Plate>
-            <p className="mt-0.5 text-[11.5px] leading-relaxed text-muted-foreground">
-              {sweptCount > 0
-                ? `${sweptCount} read from the public Library${
-                    items.length > sweptCount ? ` · ${items.length - sweptCount} added by you` : ""
-                  }`
-                : "Nothing collected automatically yet — add what you see below."}
+            <Plate className="block">The contact sheet</Plate>
+            <p className="mt-0.5 min-w-0 text-[11.5px] leading-relaxed text-muted-foreground">
+              {sweptCount > 0 ? (
+                <>
+                  <EdgeCode>{sweptCount}</EdgeCode> read off the public Ad Library
+                  {items.length > sweptCount ? ` · ${items.length - sweptCount} added by you` : ""}
+                  {withArt > 0 ? ` · ${withArt} with artwork` : ""}
+                </>
+              ) : (
+                "Nothing collected automatically yet — sweep again, or add what you saw."
+              )}
             </p>
           </div>
           <Button
@@ -83,17 +94,29 @@ export function CollectWorkspace({
             disabled={pending}
             onClick={() =>
               startTransition(async () => {
+                setSweeping(true);
                 const result = await resweep(run.id);
+                setSweeping(false);
                 if (!result.ok) toast.error(result.error);
-                else toast.success("Swept again — anything new is on the board.");
+                else toast.success("Swept again — anything new is on the sheet.");
                 router.refresh();
               })
             }
           >
-            <RefreshCw size={13} strokeWidth={1.7} />
-            <span className="min-w-0 truncate">{pending ? "Sweeping…" : "Sweep again"}</span>
+            <RefreshCw
+              size={13}
+              strokeWidth={1.7}
+              className={cn(pending && "animate-spin")}
+            />
+            <span className="min-w-0 truncate">{pending ? "Reading…" : "Sweep again"}</span>
           </Button>
         </div>
+
+        {sweeping ? (
+          <div className="border-b border-border px-4 py-3">
+            <FetchTicker runId={run.id} active={sweeping} />
+          </div>
+        ) : null}
 
         <div className="flex min-h-0 flex-1 flex-col overflow-y-auto">
           <CapturedList runId={run.id} items={items} />
@@ -152,46 +175,62 @@ export function CollectWorkspace({
             </div>
           }
           footer={
-            <div className="border-t border-border px-4 py-4">
-              {batch?.state === "closed" ? (
-                <>
-                  <Button
-                    className="w-full"
-                    onClick={() => router.push(`/runs/${run.id}/board`)}
-                  >
-                    See the ranked board
-                  </Button>
-                  <p className="mt-2.5 text-[11px] leading-relaxed text-muted-foreground">
-                    This collection is scored and torn down. Sweep again any time to pull in newer
-                    ads and compare.
-                  </p>
-                </>
-              ) : (
-                <>
-                  <Button
-                    className="w-full"
-                    disabled={pending || items.length === 0 || !batch}
-                    onClick={() =>
-                      startTransition(async () => {
-                        if (!batch) return;
-                        const result = await closeBatch({ runId: run.id, batchId: batch.id });
-                        if (!result.ok) {
-                          toast.error(result.error);
-                          return;
-                        }
-                        router.push(`/runs/${run.id}/board`);
-                      })
-                    }
-                  >
-                    {pending ? "Ranking what was collected…" : "Rank this collection"}
-                  </Button>
-                  <p className="mt-2.5 text-[11px] leading-relaxed text-muted-foreground">
-                    Ranking deduplicates, scores and tears down every ad here — collected or added by
-                    you, scored the same way.
-                  </p>
-                </>
-              )}
-            </div>
+            <>
+              {items.length > 0 ? (
+                <div className="border-t border-border px-4 py-4">
+                  <MarketChart
+                    ads={items.map((item) => ({
+                      advertiser: item.advertiser,
+                      visibleStartDate: item.visibleStartDate,
+                      hasArtwork: Boolean(item.artefactUrl || item.creativeUrl),
+                    }))}
+                  />
+                </div>
+              ) : null}
+
+              <div className="border-t border-border px-4 py-4">
+                {batch?.state === "closed" ? (
+                  <>
+                    <Button
+                      className="w-full"
+                      onClick={() => router.push(`/runs/${run.id}/board`)}
+                    >
+                      <span className="min-w-0 truncate">See the ranked board</span>
+                    </Button>
+                    <p className="mt-2.5 text-[11px] leading-relaxed text-muted-foreground">
+                      This collection is scored and torn down. Sweep again any time to pull in
+                      newer ads and compare.
+                    </p>
+                  </>
+                ) : (
+                  <>
+                    <Button
+                      className="w-full"
+                      disabled={pending || items.length === 0 || !batch}
+                      onClick={() =>
+                        startTransition(async () => {
+                          if (!batch) return;
+                          const result = await closeBatch({ runId: run.id, batchId: batch.id });
+                          if (!result.ok) {
+                            toast.error(result.error);
+                            return;
+                          }
+                          router.push(`/runs/${run.id}/board`);
+                        })
+                      }
+                    >
+                      <span className="min-w-0 truncate">
+                        {pending ? "Ranking the sheet…" : "Rank this collection"}
+                      </span>
+                    </Button>
+                    <p className="mt-2.5 text-[11px] leading-relaxed text-muted-foreground">
+                      Ranking deduplicates, scores and tears down every ad here — collected or
+                      added by you, scored the same way.
+                    </p>
+                  </>
+                )}
+              </div>
+            </>
           }
         />
       </div>

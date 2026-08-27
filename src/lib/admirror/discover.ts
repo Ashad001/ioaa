@@ -18,6 +18,7 @@ import "server-only";
 
 import { MARKET_PRESETS, type SearchSpec } from "./ad-library";
 import { sweepMany, type SweptAd } from "./sweep";
+import { judge, marketVocabulary, type Candidate, type Verdict } from "./relevance";
 
 const FETCH_TIMEOUT_MS = 15_000;
 
@@ -471,6 +472,8 @@ export type DiscoveredAdvertiser = {
   adCount: number;
   /** The category terms they showed up under. */
   terms: string[];
+  /** Words their own ad copy shares with the user's site. */
+  sharedWords: string[];
 };
 
 export type DiscoveryReport = {
@@ -479,6 +482,11 @@ export type DiscoveryReport = {
   /** Ads seen during discovery, kept so nothing is swept twice. */
   seenAds: SweptAd[];
   blockedTerms: string[];
+  /**
+   * Candidates the market test REJECTED, with the reason. Kept and shown,
+   * because a filter the user cannot inspect is indistinguishable from a bug.
+   */
+  rejected: Verdict[];
   note: string;
 };
 
@@ -498,14 +506,23 @@ export async function discoverAdvertisers(input: {
   country: string;
   language: string;
   mediaType: string;
+  /** The site's own words, so a candidate can be measured against them. */
+  siteTitle?: string;
+  siteDescription?: string;
+  siteHeadings?: string[];
+  /** Called as each discovery search lands, so the console can count live. */
+  onTermSettled?: (term: string, adsRead: number, index: number) => void | Promise<void>;
 }): Promise<DiscoveryReport> {
-  const terms = input.categoryTerms.slice(0, 3);
+  // Four terms rather than three: the fourth is usually the most specific one,
+  // and specificity is exactly what keeps a market from drifting.
+  const terms = input.categoryTerms.slice(0, 4);
   if (terms.length === 0) {
     return {
       advertisers: [],
       termsSwept: [],
       seenAds: [],
       blockedTerms: [],
+      rejected: [],
       note: "There were no category words to search under, so nobody was discovered automatically.",
     };
   }
@@ -518,16 +535,29 @@ export async function discoverAdvertisers(input: {
     activeStatus: "active",
   }));
 
-  // One round of three, so discovery costs about as long as a single search.
-  const outcomes = await sweepMany(specs, { concurrency: 3, limit: 30 });
+  const outcomes = await sweepMany(specs, {
+    concurrency: 3,
+    limit: 30,
+    onSettled: async (index, outcome) => {
+      if (input.onTermSettled) {
+        await input.onTermSettled(terms[index], outcome.ads.length, index);
+      }
+    },
+  });
 
   const byAdvertiser = new Map<
     string,
-    { name: string; adCount: number; terms: Set<string>; bestRank: number }
+    {
+      name: string;
+      adCount: number;
+      terms: Set<string>;
+      bestRank: number;
+      copy: string[];
+      displayLinks: Set<string>;
+    }
   >();
   const seenAds: SweptAd[] = [];
   const blockedTerms: string[] = [];
-  const brandLower = input.brandName.toLowerCase();
 
   outcomes.forEach((outcome, index) => {
     const term = terms[index];
@@ -541,53 +571,87 @@ export async function discoverAdvertisers(input: {
       if (!name || name.length < 2) continue;
       const key = name.toLowerCase();
       const existing = byAdvertiser.get(key);
+      const adCopy = [ad.headline, ad.bodyCopy, ad.ctaLabel].filter(Boolean).join(" ");
       if (existing) {
         existing.adCount += 1;
         existing.terms.add(term);
         existing.bestRank = Math.min(existing.bestRank, ad.resultRank);
+        existing.copy.push(adCopy);
+        if (ad.displayLink) existing.displayLinks.add(ad.displayLink);
       } else {
         byAdvertiser.set(key, {
           name,
           adCount: 1,
           terms: new Set([term]),
           bestRank: ad.resultRank,
+          copy: [adCopy],
+          displayLinks: new Set(ad.displayLink ? [ad.displayLink] : []),
         });
       }
     }
   });
 
-  const ranked = [...byAdvertiser.values()]
-    .filter((entry) => !entry.name.toLowerCase().includes(brandLower) || brandLower.length < 3)
+  // ── THE MARKET TEST ────────────────────────────────────────────────────────
+  // The Library's keyword search is loose on purpose, so being returned by it is
+  // NOT evidence of being a competitor. Every candidate is now held up against
+  // the vocabulary of the user's own site, and the ones that fail are kept with
+  // their reason rather than silently dropped.
+  const vocabulary = marketVocabulary({
+    categoryTerms: input.categoryTerms,
+    title: input.siteTitle ?? "",
+    description: input.siteDescription ?? "",
+    headings: input.siteHeadings ?? [],
+  });
+
+  const kept: Array<{ entry: Candidate; verdict: Verdict }> = [];
+  const rejected: Verdict[] = [];
+
+  for (const entry of byAdvertiser.values()) {
+    const candidate: Candidate = {
+      name: entry.name,
+      copy: entry.copy.join(" \n "),
+      adCount: entry.adCount,
+      terms: [...entry.terms],
+      bestRank: entry.bestRank,
+      displayLinks: [...entry.displayLinks],
+    };
+    const verdict = judge(candidate, vocabulary, {
+      ownBrand: input.brandName,
+      country: input.country,
+    });
+    if (verdict.keep) kept.push({ entry: candidate, verdict });
+    else rejected.push(verdict);
+  }
+
+  const ranked = kept
     .sort((a, b) => {
-      const spread = b.terms.size - a.terms.size;
+      const byScore = b.verdict.score - a.verdict.score;
+      if (byScore !== 0) return byScore;
+      const spread = b.entry.terms.length - a.entry.terms.length;
       if (spread !== 0) return spread;
-      const volume = b.adCount - a.adCount;
+      const volume = b.entry.adCount - a.entry.adCount;
       if (volume !== 0) return volume;
-      return a.bestRank - b.bestRank;
+      return a.entry.bestRank - b.entry.bestRank;
     })
     .slice(0, 9);
 
-  const advertisers: DiscoveredAdvertiser[] = ranked.map((entry, index) => {
-    const termList = [...entry.terms];
-    const tier: DiscoveredAdvertiser["tier"] =
-      termList.length > 1 || index < 3 ? "DIRECT" : index < 6 ? "ADJACENT" : "ATTENTION";
-    // Confidence is evidence, stated as evidence: breadth of terms plus volume.
-    const confidence = Math.min(
-      95,
-      40 + termList.length * 15 + Math.min(entry.adCount, 8) * 3,
-    );
-    return {
-      name: entry.name,
-      tier,
-      whyUseful:
-        termList.length > 1
-          ? `Running ads in ${input.country} under ${termList.length} of your category words (${termList.join(", ")}).`
-          : `Running ads in ${input.country} under "${termList[0]}" — ${entry.adCount} ad${entry.adCount === 1 ? "" : "s"} seen.`,
-      confidence,
-      adCount: entry.adCount,
-      terms: termList,
-    };
-  });
+  const advertisers: DiscoveredAdvertiser[] = ranked.map(({ entry, verdict }) => ({
+    name: entry.name,
+    // The tier now follows the EVIDENCE, not the row number it happened to land
+    // on. A high score with several terms is a direct rival; a single-term match
+    // that still speaks the market's language is adjacent, not direct.
+    tier:
+      verdict.score >= 60 && entry.terms.length >= 2
+        ? "DIRECT"
+        : verdict.score >= 45
+          ? "ADJACENT"
+          : "ATTENTION",
+    whyUseful: verdict.reason,
+    confidence: verdict.score,
+    adCount: entry.adCount,
+    terms: entry.terms,
+    sharedWords: verdict.sharedWords,
+  }));
 
   // The brand's own ads are always worth a board, as the baseline.
   advertisers.unshift({
@@ -597,16 +661,26 @@ export async function discoverAdvertisers(input: {
     confidence: 95,
     adCount: 0,
     terms: [],
+    sharedWords: [],
   });
+
+  const found = advertisers.length - 1;
 
   return {
     advertisers,
     termsSwept: terms,
     seenAds,
     blockedTerms,
+    rejected: rejected.sort((a, b) => b.score - a.score).slice(0, 12),
     note:
-      advertisers.length > 1
-        ? `${advertisers.length - 1} advertisers found actually running ads in ${input.country}.`
-        : "No other advertisers came back from those searches. Add competitors by name below.",
+      found > 0
+        ? `${found} advertiser${found === 1 ? "" : "s"} found running ads in ${input.country} that speak your market's language${
+            rejected.length > 0
+              ? ` · ${rejected.length} keyword match${rejected.length === 1 ? "" : "es"} set aside as out-of-market`
+              : ""
+          }.`
+        : rejected.length > 0
+          ? `${rejected.length} advertisers came back on those keywords but none were in your market. Add competitors by name below.`
+          : "No other advertisers came back from those searches. Add competitors by name below.",
   };
 }

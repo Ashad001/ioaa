@@ -20,6 +20,31 @@ export const MATRIX_CAP = 12;
 
 export type FormatAxis = "primary" | "contrast";
 
+/**
+ * THE DELIVERY SPEC — the size and the length the assets are built to.
+ *
+ * These are requirements, not preferences: a hook brief written without a frame
+ * size and a runtime is a brief the buyer has to finish themselves, and the
+ * beat clock only works if the runtime is known before the script is written.
+ * So both are chosen at the gate, priced with everything else, carried into
+ * every prompt and stamped on every handed-over asset.
+ */
+export const RESOLUTIONS = {
+  "1080x1350": { label: "Feed", ratio: "4:5", width: 1080, height: 1350, note: "Feed and in-stream — the widest reach per view." },
+  "1080x1920": { label: "Reels & Stories", ratio: "9:16", width: 1080, height: 1920, note: "Full-screen vertical. Keep text out of the top and bottom 14%." },
+  "1080x1080": { label: "Square", ratio: "1:1", width: 1080, height: 1080, note: "Safest single size when one asset has to run everywhere." },
+} as const;
+
+export type ResolutionKey = keyof typeof RESOLUTIONS;
+
+export const DURATIONS = {
+  6: { label: "6 seconds", note: "Hook plus one proof beat. Highest completion rate." },
+  9: { label: "9 seconds", note: "Hook, objection, ask — the readable default." },
+  15: { label: "15 seconds", note: "Room for a demonstration. Needs a strong opening to earn it." },
+} as const;
+
+export type DurationKey = keyof typeof DURATIONS;
+
 export type MatrixChoice = {
   /** Add the contrasting format — six videos instead of three. */
   contrastFormat: boolean;
@@ -27,13 +52,33 @@ export type MatrixChoice = {
   includeStatics: boolean;
   /** Three alternative primary texts per cell. Text, not a render. */
   includeCopyVariants: boolean;
+  /** Pixel size every video and static is built to. */
+  resolution: ResolutionKey;
+  /** Runtime in seconds every video is cut to. */
+  durationSeconds: DurationKey;
 };
 
 export const DEFAULT_MATRIX: MatrixChoice = {
   contrastFormat: false,
   includeStatics: true,
   includeCopyVariants: false,
+  resolution: "1080x1920",
+  durationSeconds: 9,
 };
+
+export function resolutionSpec(key: ResolutionKey) {
+  return RESOLUTIONS[key] ?? RESOLUTIONS["1080x1920"];
+}
+
+export function durationSpec(key: DurationKey) {
+  return DURATIONS[key] ?? DURATIONS[9];
+}
+
+/** One line, safe to print anywhere an asset is described. */
+export function describeSpec(choice: Pick<MatrixChoice, "resolution" | "durationSeconds">): string {
+  const size = resolutionSpec(choice.resolution);
+  return `${size.width}\u00d7${size.height} (${size.ratio}) \u00b7 ${choice.durationSeconds}s`;
+}
 
 export type MatrixCost = {
   /** Hook × format cells that need motion. */
@@ -63,9 +108,10 @@ export function priceMatrix(choice: MatrixChoice, angleCount: number): MatrixCos
   const copyOptions = choice.includeCopyVariants ? videos * 3 : 0;
   const total = videos + statics;
 
+  const size = resolutionSpec(choice.resolution);
   const parts = [
-    `${videos} video brief${videos === 1 ? "" : "s"}`,
-    statics > 0 ? `${statics} static${statics === 1 ? "" : "s"}` : null,
+    `${videos} video brief${videos === 1 ? "" : "s"} at ${size.width}\u00d7${size.height}, ${choice.durationSeconds}s`,
+    statics > 0 ? `${statics} static${statics === 1 ? "" : "s"} at the same size` : null,
     copyOptions > 0 ? `${copyOptions} copy options` : null,
   ].filter(Boolean);
 

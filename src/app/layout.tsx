@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Script from "next/script";
-import "@fontsource-variable/ibm-plex-sans";
-import "@fontsource-variable/jetbrains-mono";
+import "@fontsource-variable/archivo";
+import "@fontsource-variable/martian-mono";
 import "./globals.css";
 import { Toaster } from "@/components/ui/sonner";
 import { siteUrl } from "@/lib/site";
@@ -14,7 +14,7 @@ export async function generateMetadata(): Promise<Metadata> {
       template: "%s · AdMirror",
     },
     description:
-      "AdMirror researches your brand and its competitors, hands you ready-made public Meta Ad Library searches, ranks the evidence you submit, and turns the angle you pick into three original ad variants and a test plan.",
+      "AdMirror reads your market's live ads off the public Meta Ad Library, lays them out as a contact sheet, ranks them honestly against what it actually collected, and turns the angle you circle into three original ad variants and a test plan.",
     openGraph: {
       title: "AdMirror — their best angle, your ad",
       description:

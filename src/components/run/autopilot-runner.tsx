@@ -20,6 +20,7 @@ import { toast } from "sonner";
 import { autoCollect, autoResearch, resweep } from "@/app/actions/autopilot";
 import { Button } from "@/components/ui/button";
 import { Lamp } from "@/components/rack/plate";
+import { FetchTicker } from "@/components/run/fetch-ticker";
 
 type Phase = "idle" | "discovering" | "collecting" | "done" | "failed";
 
@@ -104,12 +105,16 @@ export function AutopilotRunner({
           <p className="text-[13px] leading-relaxed text-foreground/90">{PHASE_COPY[phase]}</p>
           {busy ? (
             <p className="mt-1 text-[12px] leading-relaxed text-muted-foreground">
-              This takes a couple of minutes. You can leave this open — nothing is lost if you
-              navigate away.
+              Each search takes about forty seconds to load. Leave this open or come back —
+              nothing is lost if you navigate away.
             </p>
           ) : null}
         </div>
       </div>
+
+      {/* The counted readout. It polls only while a press is in flight, and it
+          shows ads actually read rather than a timer pretending to be one. */}
+      <FetchTicker runId={runId} active={busy} className="pt-1" />
 
       {problem ? (
         <div className="flex min-w-0 items-start gap-2.5 rounded-sm border border-lamp-alert/40 bg-lamp-alert/[0.07] px-3 py-2.5">

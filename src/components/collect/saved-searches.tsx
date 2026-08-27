@@ -17,7 +17,7 @@ import { savePastedSearch } from "@/app/actions/runs";
 import { autoCollect } from "@/app/actions/autopilot";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Lamp, Plate } from "@/components/rack/plate";
+import { EdgeCode, Lamp, Plate } from "@/components/rack/plate";
 import { parseSearchUrl } from "@/lib/admirror/ad-library";
 import type { SearchRow } from "@/lib/admirror/queries";
 import { cn } from "@/lib/utils";
@@ -51,8 +51,8 @@ export function SavedSearches({
   return (
     <div className="flex min-h-0 flex-col lg:h-full">
       <div className="flex min-w-0 items-center justify-between gap-3 border-b border-border px-4 py-2.5">
-        <Plate className="min-w-0 truncate">Searches swept</Plate>
-        <span className="tabular shrink-0 text-[11px] text-muted-foreground">{searches.length}</span>
+        <Plate className="min-w-0 truncate">Where the ads came from</Plate>
+        <EdgeCode className="shrink-0">{String(searches.length).padStart(2, "0")}</EdgeCode>
       </div>
 
       <div className="min-h-0 flex-1 divide-y divide-border/60 overflow-y-auto">
@@ -62,8 +62,10 @@ export function SavedSearches({
             <div
               key={row.id}
               className={cn(
-                "min-w-0 border-l-[1px] px-4 py-3 transition-colors duration-150 ease-out",
-                active ? "border-l-primary bg-primary/[0.06]" : "border-l-transparent",
+                "min-w-0 border-l-2 px-4 py-3 transition-colors duration-150 ease-out",
+                active
+                  ? "border-l-primary bg-primary/[0.07]"
+                  : "border-l-transparent hover:bg-card/50",
               )}
             >
               <div className="flex min-w-0 items-start justify-between gap-2">
@@ -78,9 +80,7 @@ export function SavedSearches({
                       {row.competitorName}
                     </span>
                     {row.lastSweepCount ? (
-                      <span className="tabular shrink-0 text-[11px] text-muted-foreground">
-                        {row.lastSweepCount}
-                      </span>
+                      <EdgeCode className="shrink-0">{row.lastSweepCount}</EdgeCode>
                     ) : null}
                   </span>
                   <span className="tabular mt-0.5 block truncate text-[11px] text-muted-foreground">
