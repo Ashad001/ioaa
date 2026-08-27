@@ -223,9 +223,10 @@ export async function toggleCompetitor(input: {
 export async function addCompetitor(input: { runId: string; name: string }): Promise<ActionResult> {
   try {
     const user = await requireUser();
-    await ownedRun(input.runId, user.id);
+    const current = await ownedRun(input.runId, user.id);
     const name = input.name.trim();
     if (!name) return { ok: false, error: "Give the competitor a name first." };
+
     await db.insert(competitor).values({
       runId: input.runId,
       name,
@@ -233,7 +234,49 @@ export async function addCompetitor(input: { runId: string; name: string }): Pro
       whyUseful: "Added by you.",
       confidence: "100",
     });
+
+    // A competitor with no search is invisible to the collector: the sweep reads
+    // SEARCHES, not names, so adding a name alone would silently never collect
+    // anything for them. Give them a search immediately.
+    const country = current.marketCountries.split(",").filter(Boolean)[0] ?? "US";
+    const language = current.marketLanguages.split(",").filter(Boolean)[0] ?? "any";
+    const spec: SearchSpec = {
+      competitorName: name,
+      country,
+      language,
+      mediaType: current.mediaType,
+      activeStatus: "active",
+    };
+
+    const existing = await db
+      .select()
+      .from(searchReference)
+      .where(
+        and(
+          eq(searchReference.runId, input.runId),
+          eq(searchReference.competitorName, name),
+          eq(searchReference.country, country),
+        ),
+      )
+      .limit(1);
+
+    if (existing.length === 0) {
+      await db.insert(searchReference).values({
+        runId: input.runId,
+        competitorName: name,
+        country,
+        language,
+        mediaType: current.mediaType,
+        activeStatus: "active",
+        filterSummary: describeFilters(spec),
+        url: buildSearchUrl(spec),
+        origin: "plan",
+        parsed: true,
+      });
+    }
+
     revalidatePath(`/runs/${input.runId}`);
+    revalidatePath(`/runs/${input.runId}/collect`);
     return { ok: true };
   } catch (error) {
     return fail(error);

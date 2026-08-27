@@ -172,8 +172,18 @@ export function CompetitorMap({
               onClick={() =>
                 startTransition(async () => {
                   const result = await addCompetitor({ runId, name: newName });
-                  if (!result.ok) toast.error(result.error);
-                  else setNewName("");
+                  if (!result.ok) {
+                    toast.error(result.error);
+                    return;
+                  }
+                  const added = newName.trim();
+                  setNewName("");
+                  router.refresh();
+                  // Collect for them straight away — a name with no ads behind it
+                  // is not what the user asked for when they added a competitor.
+                  toast.success(`Added ${added} — collecting their ads now.`);
+                  const swept = await autoCollect(runId);
+                  if (!swept.ok) toast.error(swept.error);
                   router.refresh();
                 })
               }
@@ -183,7 +193,7 @@ export function CompetitorMap({
             </Button>
           </div>
           <p className="text-[11.5px] leading-relaxed text-muted-foreground">
-            Added by hand? Sweep again to pull their ads in too.
+            Their ads get collected as soon as you add them.
           </p>
         </div>
       </div>

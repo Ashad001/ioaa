@@ -354,10 +354,14 @@ export async function autoCollect(runId: string): Promise<ActionResult> {
 
     await setStep(runId, "EVIDENCE_INTAKE", "running", "Reading the public Ad Library");
 
+    // EVERY saved search, including ones the user pasted themselves. Sweeping
+    // only the auto-built plan was a real bug: the paste box promises "the next
+    // sweep will read this search too", and a promise the collector doesn't keep
+    // is worse than no paste box at all.
     const searches = await db
       .select()
       .from(searchReference)
-      .where(and(eq(searchReference.runId, runId), eq(searchReference.origin, "plan")))
+      .where(eq(searchReference.runId, runId))
       .orderBy(asc(searchReference.createdAt));
 
     if (searches.length === 0) {
@@ -380,7 +384,16 @@ export async function autoCollect(runId: string): Promise<ActionResult> {
           .returning()
       )[0];
 
-    const slice = searches.slice(0, MAX_SEARCHES);
+    // Only MAX_SEARCHES fit in one press, so choose fairly: never-swept first,
+    // then stalest. Without this, searches 7+ would never be read on a run with
+    // a long competitor list — permanently invisible rather than merely late.
+    const ordered = [...searches].sort((a, b) => {
+      const aTime = a.lastSweptAt ? a.lastSweptAt.getTime() : 0;
+      const bTime = b.lastSweptAt ? b.lastSweptAt.getTime() : 0;
+      return aTime - bTime;
+    });
+
+    const slice = ordered.slice(0, MAX_SEARCHES);
     const specs: SearchSpec[] = slice.map((row) => ({
       competitorName: row.competitorName,
       country: row.country,
@@ -406,29 +419,65 @@ export async function autoCollect(runId: string): Promise<ActionResult> {
     const observedAt = new Date();
     const inserts: (typeof evidenceItem.$inferInsert)[] = [];
     const gaps: string[] = [];
+    const sweepRecords: Array<{
+      id: string;
+      lastSweptAt: Date;
+      lastSweepCount: string;
+      lastSweepNote: string;
+      lastSweepState: string;
+    }> = [];
     let collected = 0;
+    let readOk = 0;
+    let adsSeen = 0;
 
     outcomes.forEach((outcome, index) => {
       const search = slice[index];
-      if (!outcome.ok || outcome.ads.length === 0) {
-        gaps.push(`${search.competitorName} — ${outcome.note}`);
-        return;
-      }
+      let newFromThis = 0;
 
       for (const ad of outcome.ads) {
         const key = ad.libraryUrl.trim().toLowerCase();
         if (knownUrls.has(key)) continue;
         knownUrls.add(key);
+        newFromThis += 1;
         collected += 1;
-        inserts.push(sweptToEvidence(ad, {
-          runId,
-          batchId: targetBatch.id,
-          searchReferenceId: search.id,
-          market: search.country,
-          language: search.language,
-          observedAt,
-        }));
+        inserts.push(
+          sweptToEvidence(ad, {
+            runId,
+            batchId: targetBatch.id,
+            searchReferenceId: search.id,
+            market: search.country,
+            language: search.language,
+            observedAt,
+          }),
+        );
       }
+
+      if (outcome.ok) {
+        readOk += 1;
+        adsSeen += outcome.ads.length;
+      }
+      if (!outcome.ok || outcome.ads.length === 0) {
+        gaps.push(`${search.competitorName} — ${outcome.note}`);
+      }
+
+      // Record what THIS search did, so the UI can say why a competitor is empty
+      // instead of leaving the user to guess.
+      sweepRecords.push({
+        id: search.id,
+        lastSweptAt: observedAt,
+        lastSweepCount: String(outcome.ads.length),
+        lastSweepNote:
+          outcome.ads.length > 0 && newFromThis === 0
+            ? `${outcome.ads.length} ads read — all already on your board.`
+            : outcome.note,
+        lastSweepState: outcome.blocked
+          ? "blocked"
+          : !outcome.ok
+            ? "failed"
+            : outcome.ads.length === 0
+              ? "empty"
+              : "ok",
+      });
     });
 
     if (inserts.length > 0) {
@@ -438,12 +487,32 @@ export async function autoCollect(runId: string): Promise<ActionResult> {
       }
     }
 
-    if (collected === 0) {
+    for (const record of sweepRecords) {
+      await db
+        .update(searchReference)
+        .set({
+          lastSweptAt: record.lastSweptAt,
+          lastSweepCount: record.lastSweepCount,
+          lastSweepNote: record.lastSweepNote,
+          lastSweepState: record.lastSweepState,
+        })
+        .where(
+          and(eq(searchReference.id, record.id), eq(searchReference.runId, runId)),
+        );
+    }
+
+    const boardTotal = already.length + collected;
+
+    // NOTHING READ AT ALL is a genuine failure. Reading ads but finding nothing
+    // NEW is a success — it means the market hasn't moved since the last sweep,
+    // and reporting that as a failure (the old behaviour) told users their
+    // working app was broken every time they re-swept an unchanged market.
+    if (readOk === 0) {
       await setStep(
         runId,
         "EVIDENCE_INTAKE",
         "blocked_on_user",
-        "Nothing could be read automatically — capture is open to you",
+        "Nothing could be read automatically — adding by hand is open to you",
       );
       await db
         .update(run)
@@ -454,8 +523,47 @@ export async function autoCollect(runId: string): Promise<ActionResult> {
       return {
         ok: false,
         error:
-          "No ads could be read from the Library this time. The searches are saved — open any of them and paste what you see.",
+          "No ads could be read from the Library this time. The searches are saved — open any of them and add what you see.",
       };
+    }
+
+    if (collected === 0) {
+      await setStep(
+        runId,
+        "EVIDENCE_INTAKE",
+        "done",
+        `${adsSeen} ads read · nothing new since the last sweep`,
+      );
+
+      // A re-sweep opens a fresh collection before it knows whether the market
+      // has moved. If it hasn't, that collection is empty — and since the board
+      // shows the LATEST one, leaving it would blank a board that has ads in it.
+      // Drop the empty collection and let the previous ranked one stand.
+      const inTarget = await db
+        .select()
+        .from(evidenceItem)
+        .where(and(eq(evidenceItem.runId, runId), eq(evidenceItem.batchId, targetBatch.id)));
+
+      if (inTarget.length === 0) {
+        await db
+          .delete(evidenceBatch)
+          .where(and(eq(evidenceBatch.id, targetBatch.id), eq(evidenceBatch.runId, runId)));
+        if (boardTotal > 0) {
+          await db
+            .update(run)
+            .set({ status: "AWAITING_GATE", updatedAt: new Date() })
+            .where(eq(run.id, runId));
+          await setStep(runId, "HUMAN_GATE", "blocked_on_user", "Pick the angles you want");
+        }
+      } else {
+        // Same ads still in an open collection — rank it so the board isn't stale.
+        await analyse(runId, targetBatch.id);
+      }
+
+      revalidatePath(`/runs/${runId}`);
+      revalidatePath(`/runs/${runId}/collect`);
+      revalidatePath(`/runs/${runId}/board`);
+      return { ok: true };
     }
 
     await setStep(

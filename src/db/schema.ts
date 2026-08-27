@@ -230,6 +230,20 @@ export const searchReference = pgTable(
     /** Kept verbatim when a pasted URL could not be parsed. */
     rawInput: text("raw_input"),
     parsed: boolean("parsed").notNull().default(true),
+    /**
+     * What the last sweep of THIS search actually did. Without these three the
+     * app cannot tell the user why a competitor has no ads — an empty market, a
+     * blocked page and a search that was never reached all look identical, and
+     * "we don't know" presented as "nothing there" is exactly the kind of quiet
+     * fabrication the provenance rules exist to prevent.
+     */
+    lastSweptAt: timestamp("last_swept_at"),
+    /** Ads READ from the page last time, as text. Null = never swept. */
+    lastSweepCount: text("last_sweep_count"),
+    /** Plain-words outcome, shown verbatim in the UI. */
+    lastSweepNote: text("last_sweep_note"),
+    /** ok · empty · blocked · failed — drives the lamp beside the search. */
+    lastSweepState: text("last_sweep_state"),
     createdAt: timestamp("created_at").notNull().defaultNow(),
   },
   (t) => [index("search_reference_run_idx").on(t.runId)],

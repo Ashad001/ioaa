@@ -14,9 +14,10 @@ import { ExternalLink, Link2, Search } from "lucide-react";
 import { toast } from "sonner";
 
 import { savePastedSearch } from "@/app/actions/runs";
+import { autoCollect } from "@/app/actions/autopilot";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Plate } from "@/components/rack/plate";
+import { Lamp, Plate } from "@/components/rack/plate";
 import { parseSearchUrl } from "@/lib/admirror/ad-library";
 import type { SearchRow } from "@/lib/admirror/queries";
 import { cn } from "@/lib/utils";
@@ -37,6 +38,15 @@ export function SavedSearches({
   const [pasted, setPasted] = useState("");
 
   const preview = pasted.trim() ? parseSearchUrl(pasted) : null;
+
+  /**
+   * The lamp beside a search says what the last sweep of it actually did. This
+   * distinction is the point: "nobody advertises under this term" and "the page
+   * would not load for us" look identical on a board, and only one of them means
+   * the market is quiet.
+   */
+  const lampFor = (state: string | null) =>
+    state === "ok" ? "done" : state === "empty" ? "cold" : state === null ? "cold" : "alert";
 
   return (
     <div className="flex min-h-0 flex-col lg:h-full">
@@ -62,7 +72,17 @@ export function SavedSearches({
                   onClick={() => onSelect(active ? null : row.id)}
                   className="min-w-0 flex-1 text-left"
                 >
-                  <span className="block truncate text-[13px] text-foreground">{row.competitorName}</span>
+                  <span className="flex min-w-0 items-center gap-2">
+                    <Lamp state={lampFor(row.lastSweepState)} className="shrink-0" />
+                    <span className="min-w-0 flex-1 truncate text-[13px] text-foreground">
+                      {row.competitorName}
+                    </span>
+                    {row.lastSweepCount ? (
+                      <span className="tabular shrink-0 text-[11px] text-muted-foreground">
+                        {row.lastSweepCount}
+                      </span>
+                    ) : null}
+                  </span>
                   <span className="tabular mt-0.5 block truncate text-[11px] text-muted-foreground">
                     {row.filterSummary}
                   </span>
@@ -73,6 +93,16 @@ export function SavedSearches({
                   </span>
                 ) : null}
               </div>
+
+              {row.lastSweepNote ? (
+                <p className="mt-1.5 text-[11.5px] leading-relaxed text-muted-foreground">
+                  {row.lastSweepNote}
+                </p>
+              ) : (
+                <p className="mt-1.5 text-[11.5px] leading-relaxed text-muted-foreground">
+                  Not swept yet — the next collection will read this one.
+                </p>
+              )}
 
               <div className="mt-2.5 flex flex-wrap items-center gap-2">
                 <Button size="sm" variant="secondary" className="shrink-0" render={<a href={row.url} target="_blank" rel="noopener noreferrer" />}><span className="min-w-0 truncate">Open in Ad Library</span>
@@ -131,7 +161,11 @@ export function SavedSearches({
                   return;
                 }
                 setPasted("");
-                toast.success("Search saved. Sweep again to pull its ads in.");
+                toast.success("Search saved — collecting its ads now.");
+                router.refresh();
+                const swept = await autoCollect(runId);
+                if (!swept.ok) toast.error(swept.error);
+                else toast.success("Read your search — anything new is on the board.");
                 router.refresh();
               })
             }
@@ -149,7 +183,7 @@ export function SavedSearches({
                   {preview.summary}
                 </p>
                 <p className="mt-1.5 text-[11px] leading-relaxed text-muted-foreground">
-                  Saved. The next sweep will read this search too.
+                  Saved, and read straight away — no extra step.
                 </p>
               </>
             ) : (
