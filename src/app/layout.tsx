@@ -14,11 +14,11 @@ export async function generateMetadata(): Promise<Metadata> {
       template: "%s · AdMirror",
     },
     description:
-      "AdMirror reads your market's live ads off the public Meta Ad Library, lays them out as a contact sheet, ranks them honestly against what it actually collected, and turns the angle you circle into three original ad variants and a test plan.",
+      "AdMirror maps live paid-social creative from the public Meta Ad Library, ranks the observed signals honestly, and turns the angle you choose into original ad variants and a test plan.",
     openGraph: {
       title: "AdMirror — their best angle, your ad",
       description:
-        "AdMirror reads your market's live ads from the public Ad Library, ranks them honestly against what was actually collected, and turns the angle you pick into your own variants.",
+        "AdMirror maps live paid-social creative from the public Ad Library, ranks observed signals honestly, and turns the angle you choose into your own variants.",
       type: "website",
     },
   };

@@ -1,35 +1,35 @@
 ---
 name: "AdMirror"
-description: "A competitive-creative engine for paid social: give it your website, it builds a profile of your company and works out what field you're in, looks up the companies advertising in that field and the ones next to it, profiles each of them from their own live ads, and — once you approve that list — collects their ads out of the Meta Ad Library with the artwork attached, puts the hardest-working ones first (using the reach Meta actually publishes), then turns the angle you pick into three original ad variants and a test plan."
+description: "A competitive-creative engine for paid social: give it your website, it reads what you sell and the field you’re in, builds an evidence-backed profile of your direct and adjacent competitors from their live Meta ads, ranks observed signals without inventing performance, and turns the angle you pick into three original variants and a test plan."
 colors:
-  background: "oklch(0.171 0.013 252)"
-  foreground: "oklch(0.951 0.005 247)"
-  card: "oklch(0.222 0.014 250)"
-  card-foreground: "oklch(0.956 0.005 247)"
-  popover: "oklch(0.256 0.015 250)"
-  popover-foreground: "oklch(0.962 0.005 247)"
-  primary: "oklch(0.598 0.216 22)"
-  primary-foreground: "oklch(0.975 0.012 40)"
-  secondary: "oklch(0.288 0.014 250)"
-  secondary-foreground: "oklch(0.942 0.005 247)"
-  muted: "oklch(0.262 0.013 250)"
-  muted-foreground: "oklch(0.742 0.014 249)"
-  accent: "oklch(0.318 0.018 248)"
-  accent-foreground: "oklch(0.962 0.005 247)"
-  destructive: "oklch(0.598 0.216 22)"
-  border: "oklch(0.344 0.016 250)"
-  input: "oklch(0.302 0.015 250)"
-  ring: "oklch(0.598 0.216 22)"
-  rack-rail: "oklch(0.146 0.012 252)"
-  rack-seam: "oklch(0.398 0.018 250)"
-  rack-engrave: "oklch(0.688 0.016 249)"
-  film-base: "oklch(0.128 0.011 254)"
-  film-rebate: "oklch(0.234 0.014 250)"
-  film-edge: "oklch(0.776 0.153 66)"
+  background: "oklch(0.132 0.01 260)"
+  foreground: "oklch(0.949 0.006 180)"
+  card: "oklch(0.163 0.012 258)"
+  card-foreground: "oklch(0.949 0.006 180)"
+  popover: "oklch(0.188 0.013 258)"
+  popover-foreground: "oklch(0.956 0.006 180)"
+  primary: "oklch(0.738 0.152 162)"
+  primary-foreground: "oklch(0.168 0.022 165)"
+  secondary: "oklch(0.203 0.013 258)"
+  secondary-foreground: "oklch(0.924 0.007 180)"
+  muted: "oklch(0.183 0.012 258)"
+  muted-foreground: "oklch(0.665 0.017 225)"
+  accent: "oklch(0.236 0.018 258)"
+  accent-foreground: "oklch(0.956 0.006 180)"
+  destructive: "oklch(0.661 0.196 28)"
+  border: "oklch(0.285 0.014 258)"
+  input: "oklch(0.239 0.013 258)"
+  ring: "oklch(0.738 0.152 162)"
+  rack-rail: "oklch(0.112 0.009 260)"
+  rack-seam: "oklch(0.388 0.015 252)"
+  rack-engrave: "oklch(0.63 0.019 218)"
+  film-base: "oklch(0.145 0.011 260)"
+  film-rebate: "oklch(0.219 0.013 258)"
+  film-edge: "oklch(0.738 0.152 162)"
 rounded:
   sm: "calc(var(--radius) * 0.6)"
   md: "calc(var(--radius) * 0.8)"
-  lg: "0.125rem"
+  lg: "0.4rem"
   xl: "calc(var(--radius) * 1.4)"
   2xl: "calc(var(--radius) * 1.8)"
   3xl: "calc(var(--radius) * 2.2)"
@@ -40,43 +40,43 @@ rounded:
 
 ## Overview
 
-**Broadcast control rack.** Anodised graphite panels with milled seams and a fine horizontal grain, engraved mono plate labels, and tally lamps. One amber lamp colour is reserved for actions and live state — it never appears as decoration. Dark in both schemes on purpose: the use scene is someone reading ad accounts all day in a dim room.
+**Prediction-market console.** A near-black live market surface with compact data modules, a finely striped top rail, dense numerical readouts, and one electric green signal. It suits the real use scene: a marketer cross-checking competitive ads at a desk, where the important question is what is moving and why.
 
 ## Colors
 
 Defined in `src/app/globals.css` as the single `:root` token block (oklch). Keep the
 token NAMES; change values there only.
 | Token | Value |
-| background | `oklch(0.198 0.006 264)` — graphite chassis |
-| card / panel | `oklch(0.243 0.007 264)` |
-| popover | `oklch(0.262 0.008 264)` |
-| foreground | `oklch(0.938 0.004 264)` |
-| muted-foreground | `oklch(0.716 0.011 264)` |
-| border | `oklch(0.348 0.009 264)` |
-| primary (amber tally) | `oklch(0.782 0.152 71)` |
-| rack-rail | `oklch(0.171 0.005 264)` — recessed rail behind panels |
-| rack-seam | `oklch(0.402 0.010 264)` — milled seam / scrollbar |
-| rack-engrave | `oklch(0.652 0.010 264)` — engraved label text |
-| lamp-live | `oklch(0.762 0.148 143)` — observed, cleared, done |
-| lamp-hold | `oklch(0.782 0.152 71)` — your turn, running |
-| lamp-cold | `oklch(0.548 0.012 264)` — not started |
-| lamp-alert | `oklch(0.662 0.176 28)` — blocked, thin coverage |
+| background | `oklch(0.132 0.01 260)` — near-black console ground |
+| card / panel | `oklch(0.163 0.012 258)` — compact market module |
+| popover | `oklch(0.188 0.013 258)` |
+| foreground | `oklch(0.949 0.006 180)` — cool white |
+| muted-foreground | `oklch(0.665 0.017 225)` — blue-grey utility text |
+| border | `oklch(0.285 0.014 258)` — low-contrast graphite rule |
+| primary | `oklch(0.738 0.152 162)` — the green live signal |
+| rack-rail | `oklch(0.112 0.009 260)` — top rail and scroll track |
+| rack-seam | `oklch(0.388 0.015 252)` — dividers and inactive figures |
+| rack-engrave | `oklch(0.63 0.019 218)` — labels and secondary metadata |
+| lamp-live | `oklch(0.738 0.152 162)` — observed, cleared, done |
+| lamp-hold | `oklch(0.754 0.161 82)` — reading, needs attention |
+| lamp-cold | `oklch(0.485 0.016 252)` — not started |
+| lamp-alert | `oklch(0.661 0.196 28)` — blocked or failed |
 
 Declared in `globals.css` as `--color-*` and mirrored in the frontmatter. Use the token, never a raw hex.
 
 ## Typography
 
-- **Body / headings:** IBM Plex Sans Variable (`@fontsource-variable/ibm-plex-sans`).
-  Headings are medium weight with `-0.02em`/`-0.025em` tracking, never bold-and-large.
-- **Labels, numbers, code:** JetBrains Mono Variable
-  (`@fontsource-variable/jetbrains-mono`) — used for engraved plate labels and all
-  measurement. Loaded via Fontsource, never `next/font/google`.
+- **Body / headings:** Archivo Variable (`@fontsource-variable/archivo`). Headings use
+  a tight weight and tracking, never an oversized display treatment.
+- **Labels, numbers, code:** Martian Mono Variable
+  (`@fontsource-variable/martian-mono`) — used for status, identifiers, and all
+  measurements.
 - Two faces only.
 
 
 ## Shapes
 
-Radii: `sm` calc(var(--radius) * 0.6), `md` calc(var(--radius) * 0.8), `lg` 0.125rem, `xl` calc(var(--radius) * 1.4), `2xl` calc(var(--radius) * 1.8), `3xl` calc(var(--radius) * 2.2), `4xl` calc(var(--radius) * 2.6)
+Radii: `sm` calc(var(--radius) * 0.6), `md` calc(var(--radius) * 0.8), `lg` 0.4rem, `xl` calc(var(--radius) * 1.4), `2xl` calc(var(--radius) * 1.8), `3xl` calc(var(--radius) * 2.2), `4xl` calc(var(--radius) * 2.6)
 
 ## Do's and Don'ts
 

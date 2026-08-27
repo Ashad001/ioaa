@@ -49,7 +49,6 @@ textarea {
   --font-heading: var(--font-sans);
   --font-sans: var(--font-sans);
   --font-mono: var(--font-mono);
-  /* Real beziers behind the easing utilities — see the :root block below. */
   --ease-out: var(--ease-out);
   --ease-in-out: var(--ease-in-out);
   --ease-in: var(--ease-in);
@@ -105,139 +104,98 @@ textarea {
   --radius-4xl: calc(var(--radius) * 2.6);
 }
 
-/* ─── THE TOKEN BLOCK ─────────────────────────────────────────────────────────
-   Committed world: A PHOTOGRAPHIC CONTACT SHEET ON A LIGHT TABLE.
-
-   The scene is the one a creative team actually stands over: a cold fluorescent
-   light box, a developed contact sheet laid on the glass, frames in rows with
-   sprocket-perforated rebates and orange edge-print codes running down them. You
-   lean in with a loupe, and you circle the keepers in red grease pencil.
-
-   That gives every token its job:
-   - GROUND is the unlit part of the table — deep blue-black glass, cooler than
-     neutral, because a light box is daylight-balanced.
-   - A PANEL is illuminated glass: a step lighter and cooler than the ground with
-     a soft glow at its top edge, never a floating rounded card.
-   - A FRAME is a film chip: near-black emulsion base, and it develops in.
-   - EDGE PRINT is the film stock's orange-amber latent code — used for
-     identifiers, counts and measurement, never for a button.
-   - GREASE PENCIL RED is the mark the human makes: reserved for selection and
-     the one primary action. Nothing decorative may borrow it.
-   - SAFELIGHT AMBER means "the machine is reading right now".
-   Radii stay near-square: film chips and light-box glass have cut edges.
-
-   Keep the NAMES, change the VALUES — every component in src/components/ui reads
-   these names. Never add a second `:root` block.
-   ──────────────────────────────────────────────────────────────────────────── */
+/* Dark prediction-market terminal: the black screen is a working surface, panels
+   are compact market modules, and green carries the one live signal. */
 :root {
   --font-sans: "Archivo Variable", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
   --font-mono: "Martian Mono Variable", ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace;
 
-  /* Unlit table glass. */
-  --background: oklch(0.171 0.013 252);
-  --foreground: oklch(0.951 0.005 247);
+  --background: oklch(0.132 0.01 260);
+  --foreground: oklch(0.949 0.006 180);
+  --card: oklch(0.163 0.012 258);
+  --card-foreground: oklch(0.949 0.006 180);
+  --popover: oklch(0.188 0.013 258);
+  --popover-foreground: oklch(0.956 0.006 180);
 
-  /* Illuminated glass panel. */
-  --card: oklch(0.222 0.014 250);
-  --card-foreground: oklch(0.956 0.005 247);
-  --popover: oklch(0.256 0.015 250);
-  --popover-foreground: oklch(0.962 0.005 247);
+  --primary: oklch(0.738 0.152 162);
+  --primary-foreground: oklch(0.168 0.022 165);
+  --secondary: oklch(0.203 0.013 258);
+  --secondary-foreground: oklch(0.924 0.007 180);
+  --muted: oklch(0.183 0.012 258);
+  --muted-foreground: oklch(0.665 0.017 225);
+  --accent: oklch(0.236 0.018 258);
+  --accent-foreground: oklch(0.956 0.006 180);
+  --destructive: oklch(0.661 0.196 28);
+  --border: oklch(0.285 0.014 258);
+  --input: oklch(0.239 0.013 258);
+  --ring: oklch(0.738 0.152 162);
 
-  /* Grease pencil — selection and the one real action. */
-  --primary: oklch(0.598 0.216 22);
-  --primary-foreground: oklch(0.975 0.012 40);
+  --chart-1: oklch(0.738 0.152 162);
+  --chart-2: oklch(0.704 0.126 227);
+  --chart-3: oklch(0.754 0.161 82);
+  --chart-4: oklch(0.661 0.196 28);
+  --chart-5: oklch(0.69 0.128 302);
 
-  --secondary: oklch(0.288 0.014 250);
-  --secondary-foreground: oklch(0.942 0.005 247);
-  --muted: oklch(0.262 0.013 250);
-  --muted-foreground: oklch(0.742 0.014 249);
-  --accent: oklch(0.318 0.018 248);
-  --accent-foreground: oklch(0.962 0.005 247);
-  --destructive: oklch(0.598 0.216 22);
-  --border: oklch(0.344 0.016 250);
-  --input: oklch(0.302 0.015 250);
-  --ring: oklch(0.598 0.216 22);
+  --radius: 0.4rem;
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
+  --ease-in: cubic-bezier(0.7, 0, 0.84, 0);
+  --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
 
-  /* Data graphics read as gel filters over the light box, edge-print first. */
-  --chart-1: oklch(0.776 0.153 66);
-  --chart-2: oklch(0.742 0.126 214);
-  --chart-3: oklch(0.706 0.148 158);
-  --chart-4: oklch(0.598 0.216 22);
-  --chart-5: oklch(0.652 0.106 288);
+  --sidebar: oklch(0.148 0.011 260);
+  --sidebar-foreground: oklch(0.912 0.007 180);
+  --sidebar-primary: oklch(0.738 0.152 162);
+  --sidebar-primary-foreground: oklch(0.168 0.022 165);
+  --sidebar-accent: oklch(0.21 0.017 258);
+  --sidebar-accent-foreground: oklch(0.956 0.006 180);
+  --sidebar-border: oklch(0.265 0.014 258);
+  --sidebar-ring: oklch(0.738 0.152 162);
 
-  --radius: 0.125rem;
-
-  /* Motion curves. CSS's own `ease-out`/`ease-in-out` keywords are weak, mushy
-     curves and are the usual reason motion feels cheap — these replace them, so
-     the `ease-out` / `ease-in-out` / `ease-in` Tailwind utilities emit real
-     beziers. Same names in every project; retune the values, not the names. */
-  --ease-out: cubic-bezier(0.25, 0.46, 0.45, 0.94);
-  --ease-in-out: cubic-bezier(0.77, 0, 0.175, 1);
-  --ease-in: cubic-bezier(0.4, 0, 1, 1);
-  --ease-out-expo: cubic-bezier(0.23, 1, 0.32, 1);
-
-  --sidebar: oklch(0.196 0.013 251);
-  --sidebar-foreground: oklch(0.942 0.005 247);
-  --sidebar-primary: oklch(0.598 0.216 22);
-  --sidebar-primary-foreground: oklch(0.975 0.012 40);
-  --sidebar-accent: oklch(0.288 0.014 250);
-  --sidebar-accent-foreground: oklch(0.962 0.005 247);
-  --sidebar-border: oklch(0.336 0.016 250);
-  --sidebar-ring: oklch(0.598 0.216 22);
-
-  /* ── Light-table hardware ──────────────────────────────────────────────────
-     rail = the box's unlit chassis, seam = the milled joint between glass
-     panels, engrave = silkscreen legend on the frame. */
-  --rack-rail: oklch(0.146 0.012 252);
-  --rack-seam: oklch(0.398 0.018 250);
-  --rack-engrave: oklch(0.688 0.016 249);
-
-  /* Film: emulsion base, the perforated rebate, and the orange edge code. */
-  --film-base: oklch(0.128 0.011 254);
-  --film-rebate: oklch(0.234 0.014 250);
-  --film-edge: oklch(0.776 0.153 66);
-  /* The lit glass itself, for the glow along a panel's top edge. */
-  --table-glow: oklch(0.632 0.052 232);
-
-  /* Lamps on the box: safelight amber = reading, green = fixed and cleared. */
-  --lamp-live: oklch(0.752 0.152 152);
-  --lamp-hold: oklch(0.776 0.153 66);
-  --lamp-cold: oklch(0.512 0.018 250);
-  --lamp-alert: oklch(0.622 0.208 24);
+  --rack-rail: oklch(0.112 0.009 260);
+  --rack-seam: oklch(0.388 0.015 252);
+  --rack-engrave: oklch(0.63 0.019 218);
+  --film-base: oklch(0.145 0.011 260);
+  --film-rebate: oklch(0.219 0.013 258);
+  --film-edge: oklch(0.738 0.152 162);
+  --table-glow: oklch(0.683 0.102 201);
+  --lamp-live: oklch(0.738 0.152 162);
+  --lamp-hold: oklch(0.754 0.161 82);
+  --lamp-cold: oklch(0.485 0.016 252);
+  --lamp-alert: oklch(0.661 0.196 28);
 }
 
 .dark {
-  --background: oklch(0.171 0.013 252);
-  --foreground: oklch(0.951 0.005 247);
-  --card: oklch(0.222 0.014 250);
-  --card-foreground: oklch(0.956 0.005 247);
-  --popover: oklch(0.256 0.015 250);
-  --popover-foreground: oklch(0.962 0.005 247);
-  --primary: oklch(0.598 0.216 22);
-  --primary-foreground: oklch(0.975 0.012 40);
-  --secondary: oklch(0.288 0.014 250);
-  --secondary-foreground: oklch(0.942 0.005 247);
-  --muted: oklch(0.262 0.013 250);
-  --muted-foreground: oklch(0.742 0.014 249);
-  --accent: oklch(0.318 0.018 248);
-  --accent-foreground: oklch(0.962 0.005 247);
-  --destructive: oklch(0.598 0.216 22);
-  --border: oklch(0.344 0.016 250);
-  --input: oklch(0.302 0.015 250);
-  --ring: oklch(0.598 0.216 22);
-  --chart-1: oklch(0.776 0.153 66);
-  --chart-2: oklch(0.742 0.126 214);
-  --chart-3: oklch(0.706 0.148 158);
-  --chart-4: oklch(0.598 0.216 22);
-  --chart-5: oklch(0.652 0.106 288);
-  --sidebar: oklch(0.196 0.013 251);
-  --sidebar-foreground: oklch(0.942 0.005 247);
-  --sidebar-primary: oklch(0.598 0.216 22);
-  --sidebar-primary-foreground: oklch(0.975 0.012 40);
-  --sidebar-accent: oklch(0.288 0.014 250);
-  --sidebar-accent-foreground: oklch(0.962 0.005 247);
-  --sidebar-border: oklch(0.336 0.016 250);
-  --sidebar-ring: oklch(0.598 0.216 22);
+  --background: oklch(0.132 0.01 260);
+  --foreground: oklch(0.949 0.006 180);
+  --card: oklch(0.163 0.012 258);
+  --card-foreground: oklch(0.949 0.006 180);
+  --popover: oklch(0.188 0.013 258);
+  --popover-foreground: oklch(0.956 0.006 180);
+  --primary: oklch(0.738 0.152 162);
+  --primary-foreground: oklch(0.168 0.022 165);
+  --secondary: oklch(0.203 0.013 258);
+  --secondary-foreground: oklch(0.924 0.007 180);
+  --muted: oklch(0.183 0.012 258);
+  --muted-foreground: oklch(0.665 0.017 225);
+  --accent: oklch(0.236 0.018 258);
+  --accent-foreground: oklch(0.956 0.006 180);
+  --destructive: oklch(0.661 0.196 28);
+  --border: oklch(0.285 0.014 258);
+  --input: oklch(0.239 0.013 258);
+  --ring: oklch(0.738 0.152 162);
+  --chart-1: oklch(0.738 0.152 162);
+  --chart-2: oklch(0.704 0.126 227);
+  --chart-3: oklch(0.754 0.161 82);
+  --chart-4: oklch(0.661 0.196 28);
+  --chart-5: oklch(0.69 0.128 302);
+  --sidebar: oklch(0.148 0.011 260);
+  --sidebar-foreground: oklch(0.912 0.007 180);
+  --sidebar-primary: oklch(0.738 0.152 162);
+  --sidebar-primary-foreground: oklch(0.168 0.022 165);
+  --sidebar-accent: oklch(0.21 0.017 258);
+  --sidebar-accent-foreground: oklch(0.956 0.006 180);
+  --sidebar-border: oklch(0.265 0.014 258);
+  --sidebar-ring: oklch(0.738 0.152 162);
 }
 
 @layer base {
@@ -249,15 +207,12 @@ textarea {
   }
   html {
     @apply font-sans;
-  }
-  /* The surfaces we did not draw still belong to the light table. */
-  ::selection {
-    background: oklch(0.598 0.216 22 / 0.3);
-    color: var(--foreground);
-  }
-  html {
     scrollbar-width: thin;
     scrollbar-color: var(--rack-seam) var(--rack-rail);
+  }
+  ::selection {
+    background: oklch(0.738 0.152 162 / 0.27);
+    color: var(--foreground);
   }
   ::-webkit-scrollbar {
     width: 10px;
@@ -269,6 +224,7 @@ textarea {
   ::-webkit-scrollbar-thumb {
     background: var(--rack-seam);
     border: 2px solid var(--rack-rail);
+    border-radius: 999px;
   }
   ::-webkit-scrollbar-thumb:hover {
     background: var(--rack-engrave);
@@ -282,28 +238,21 @@ textarea {
   }
 }
 
-/* ─── Light-table hardware ────────────────────────────────────────────────────
-   The physical vocabulary of the direction: silkscreen legends on the box
-   frame, illuminated glass, film chips with perforated rebates, and the
-   tabular numerals a measurement readout needs. */
-
-/* Silkscreen legend printed on the light box's frame. */
 @utility plate {
   font-family: var(--font-mono);
   font-size: 0.625rem;
-  font-weight: 500;
+  font-weight: 600;
   line-height: 1.2;
-  letter-spacing: 0.16em;
+  letter-spacing: 0.13em;
   text-transform: uppercase;
 }
 
-/* Latent edge code printed down a film rebate — identifiers and counts. */
 @utility edge-print {
   font-family: var(--font-mono);
   font-size: 0.5625rem;
   font-weight: 600;
   line-height: 1;
-  letter-spacing: 0.2em;
+  letter-spacing: 0.14em;
   text-transform: uppercase;
   color: var(--film-edge);
   font-variant-numeric: tabular-nums;
@@ -314,49 +263,39 @@ textarea {
   font-feature-settings: "tnum" 1;
 }
 
-/* A sheet of illuminated glass: cut edges, light spilling from the top seam. */
 @utility panel {
   background: var(--card);
   border: 1px solid var(--border);
-  box-shadow:
-    inset 0 1px 0 oklch(1 0 0 / 0.05),
-    0 1px 3px oklch(0 0 0 / 0.5);
+  box-shadow: inset 0 1px 0 oklch(1 0 0 / 0.035);
 }
 
-/* The lit glass under the sheet — a wash of daylight blue from the top edge. */
 @utility lightbox {
   background:
-    linear-gradient(to bottom, oklch(0.632 0.052 232 / 0.09), transparent 42%),
+    linear-gradient(to bottom, oklch(1 0 0 / 0.022), transparent 26%),
     var(--card);
 }
 
-/* Film emulsion base — what an unexposed or developing frame sits on. */
 @utility emulsion {
-  background: var(--film-base);
+  background:
+    linear-gradient(to bottom, oklch(1 0 0 / 0.018), transparent 54%),
+    var(--film-base);
 }
 
-/* The perforated rebate down the side of a strip of 35mm film. */
 @utility perforated {
   background-image: repeating-linear-gradient(
     to bottom,
     transparent 0px,
-    transparent 5px,
-    oklch(1 0 0 / 0.1) 5px,
-    oklch(1 0 0 / 0.1) 12px,
-    transparent 12px,
-    transparent 17px
+    transparent 6px,
+    oklch(1 0 0 / 0.08) 6px,
+    oklch(1 0 0 / 0.08) 7px,
+    transparent 7px,
+    transparent 13px
   );
 }
 
-/* Fine fluorescent striping across the table glass. */
 @utility milled {
-  background-image: repeating-linear-gradient(
-    to bottom,
-    oklch(1 0 0 / 0.024) 0px,
-    oklch(1 0 0 / 0.024) 1px,
-    transparent 1px,
-    transparent 5px
-  );
+  background-image: linear-gradient(to right, oklch(1 0 0 / 0.025) 1px, transparent 1px);
+  background-size: 4px 100%;
 }
 
 @keyframes lamp-pulse {
@@ -365,7 +304,7 @@ textarea {
     opacity: 1;
   }
   50% {
-    opacity: 0.34;
+    opacity: 0.42;
   }
 }
 
@@ -373,23 +312,21 @@ textarea {
   animation: lamp-pulse 1.9s var(--ease-in-out) infinite;
 }
 
-/* A frame coming up in the developer: density and contrast arriving together. */
 @keyframes develop-in {
   from {
     opacity: 0;
-    filter: brightness(0.35) contrast(0.6);
+    transform: translateY(3px);
   }
   to {
     opacity: 1;
-    filter: none;
+    transform: translateY(0);
   }
 }
 
 @utility developing {
-  animation: develop-in 0.72s var(--ease-out) both;
+  animation: develop-in 0.42s var(--ease-out) both;
 }
 
-/* The loupe sweep that runs while a search is being read. */
 @keyframes loupe-sweep {
   from {
     transform: translateX(-105%);

@@ -1,19 +1,7 @@
-/**
- * Light-table hardware: the small physical pieces the whole interface is
- * assembled from.
- *
- * The world is A PHOTOGRAPHIC CONTACT SHEET ON A LIGHT TABLE — cold illuminated
- * glass, film chips with perforated rebates and orange edge-print codes, a loupe,
- * and a red grease pencil for the frames you choose. These components are that
- * vocabulary, so no screen has to reinvent it: grease-pencil red stays reserved
- * for selection and the one real action, and the amber edge code is for
- * identifiers and measurement, never for a button.
- */
 import type { ReactNode } from "react";
 
 import { cn } from "@/lib/utils";
 
-/** A silkscreen legend printed on the light box's frame. */
 export function Plate({
   children,
   className,
@@ -26,10 +14,6 @@ export function Plate({
   return <Tag className={cn("plate text-rack-engrave", className)}>{children}</Tag>;
 }
 
-/**
- * A latent edge code — the film stock's own orange printing down the rebate.
- * Identifiers, counts and measurement live here.
- */
 export function EdgeCode({
   children,
   className,
@@ -50,7 +34,6 @@ const LAMP_COLOR: Record<LampState, string> = {
   done: "bg-lamp-live",
 };
 
-/** A lamp on the light box. Pulses only while something is genuinely running. */
 export function Lamp({
   state,
   pulsing = false,
@@ -75,7 +58,6 @@ export function Lamp({
   );
 }
 
-/** A sheet of illuminated glass, light spilling from its top seam. */
 export function Panel({
   children,
   className,
@@ -88,10 +70,10 @@ export function Panel({
   aside?: ReactNode;
 }) {
   return (
-    <section className={cn("panel lightbox rounded-sm", className)}>
+    <section className={cn("panel lightbox overflow-hidden rounded-md", className)}>
       {(label || aside) && (
-        <header className="flex min-w-0 items-center justify-between gap-3 border-b border-border/70 px-4 py-2.5">
-          {label ? <Plate className="min-w-0 truncate">{label}</Plate> : <span />}
+        <header className="flex min-w-0 items-center justify-between gap-3 border-b border-border px-4 py-3">
+          {label ? <Plate className="min-w-0 truncate text-rack-engrave">{label}</Plate> : <span />}
           {aside ? <div className="flex shrink-0 items-center gap-2">{aside}</div> : null}
         </header>
       )}
@@ -100,10 +82,6 @@ export function Panel({
   );
 }
 
-/**
- * The perforated rebate down the edge of a strip of 35mm film. Purely material —
- * it is the thing that makes a row of frames read as film rather than as cards.
- */
 export function Rebate({
   className,
   orientation = "vertical",
@@ -123,7 +101,6 @@ export function Rebate({
   );
 }
 
-/** A labelled readout: silkscreen caption above a tabular value. */
 export function Readout({
   label,
   value,
@@ -138,18 +115,12 @@ export function Readout({
   return (
     <div className={cn("min-w-0", className)}>
       <Plate className="block truncate">{label}</Plate>
-      <div className="tabular mt-1 truncate text-[15px] leading-tight text-foreground">{value}</div>
+      <div className="tabular mt-1 truncate text-[15px] font-medium leading-tight text-foreground">{value}</div>
       {hint ? <div className="mt-0.5 truncate text-xs text-muted-foreground">{hint}</div> : null}
     </div>
   );
 }
 
-/**
- * A big counted number — the frame counter on the box.
- *
- * Used for anything the app COUNTED. Never for a figure it inferred, because a
- * number in this typeface reads as measured and that has to stay true.
- */
 export function Counter({
   value,
   label,
@@ -165,7 +136,7 @@ export function Counter({
     <div className={cn("min-w-0", className)}>
       <div
         className={cn(
-          "tabular font-mono text-[26px] font-semibold leading-none tracking-[-0.02em]",
+          "tabular font-mono text-[26px] font-semibold leading-none tracking-[-0.03em]",
           live ? "text-film-edge" : "text-foreground",
         )}
       >

@@ -1,7 +1,12 @@
 <!-- OWNER: Build (with the user) · READERS: every agent · READ THIS FIRST -->
 # AdMirror
 
-**One-liner:** A competitive-creative engine for paid social: give it your website, it builds a profile of your company and works out what field you're in, looks up the companies advertising in that field and the ones next to it, profiles each of them from their own live ads, and — once you approve that list — collects their ads out of the Meta Ad Library with the artwork attached, puts the hardest-working ones first (using the reach Meta actually publishes), then turns the angle you pick into three original ad variants and a test plan.
+**One-liner:** A competitive-creative engine for paid social: give it your website, it reads what you sell and the field you’re in, builds an evidence-backed profile of your direct and adjacent competitors from their live Meta ads, ranks observed signals without inventing performance, and turns the angle you pick into three original variants and a test plan.
+
+<!-- OWNER: Build (with the user) · READERS: every agent · READ THIS FIRST -->
+# AdMirror
+
+**One-liner:** A competitive-creative engine for paid social: give it your website, it reads what you sell and what field you're in, builds a profile of you and of every competitor it finds advertising in that field (and the fields next door), collects their live ads out of the Meta Ad Library with the artwork attached, puts the hardest-working ones first using the reach Meta actually publishes, then turns the angle you pick into three original ad variants and a test plan.
 
 ## Goal
 Give a marketer the winning ANGLE from their market's ads — the hook mechanism, the objection, the beat order — rewritten as their own ad, without ever inventing a performance figure Meta does not publish.
@@ -26,7 +31,16 @@ Founders, in-house marketers and freelancers running paid social themselves, in 
 - **`approveProfile` is the only door to collection** and writes one advertiser lookup per kept rival, so the approved list IS the collection plan. `reopenProfile` pauses collection again.
 - Screen: `src/app/runs/[id]/profile/page.tsx` + `src/components/profile/{company-panel,rival-list,approve-bar}.tsx`. The company panel holds BOTH the company reading and the field override (splitting them let someone fix what they sell while the field still pointed elsewhere).
 
-### THE COLLECTION FIX (current) — read this before touching the collector
+### THE PROFILE GATE (current) — read this before touching intake or the collector
+- **The order is now company → field → rivals → approve → collect.** Collection used to begin the instant a run was created: a homepage was read, its repeated words became Ad Library searches, and everything downstream was correct arithmetic over a list the user never saw. `run.profileApproved` (boolean) is the gate; `autoResearch`, `autoCollect` and `collectCompetitorAds` all refuse while it is false.
+- **`src/app/runs/[id]/profile/page.tsx` is stage 2** (`stages.ts` stage `market`, `href: "profile"`, actor `you`). It composes the profile during render via `composeProfile()` in `src/lib/admirror/profile-build.ts` — OFFLINE and idempotent, so opening the screen never spends a lookup.
+- **The field classifier** (`src/lib/admirror/category.ts`): 16 categories, each with `field`, `label`, `signals`, `marketTerms` and `neighbours`. `classify()` reads the site's own words (title/headings weighted ×3) and `sweepTerms()` builds the search plan — the category's own vocabulary first, then 2 terms per neighbour, then up to 3 of the company's own words, capped at 8. The field is stored on the run dossier as `category` with `chosenByYou`; the user can overrule it (`setCategory`) and a rebuild then never re-guesses it.
+- **The rival lookup** (`src/lib/admirror/rival-scan.ts`, user-triggered via `scanRivals`): sweeps the field's vocabulary AND its neighbours', tags every advertiser with `foundVia` (`category_sweep` / `neighbour_sweep`) and `foundUnder` (the term), then puts every candidate through the existing market test in `relevance.ts`. Rejections are KEPT with their reason and shown as the set-aside list. This is why the map now finds companies who SELL what you sell rather than companies who WRITE like you.
+- **Every competitor carries a PROFILE, before a single ad is filed.** New `competitor` columns: `field`, `categoryLabel`, `categoryRelation` (`same_category` · `neighbour_category` · `named_by_you` · `unknown`), `positioning` (quoted from their own highest-reach live ad, never paraphrased), `foundVia`, `foundUnder`, `adsSeen`, `displayLink`, `reachBand`, `profiledAt`. A named company is profiled by a DIRECT advertiser lookup (`profileNamedRival` → `readCompanyAds`), never by hoping a keyword happens to surface them.
+- **Reach on a competitor profile is the widest band Meta published across their read ads, verbatim** — never summed, never narrowed. No band renders as "Reach not published", never a zero.
+- **Intake takes a website plus optional known competitor names** (`startCompetitorRun`), and lands on the profile screen — not on a collection already in progress.
+
+### THE COLLECTION FIX — read this before touching the collector
 - **Meta blocks direct reads from servers, full stop.** Every request from this app's hosting to `facebook.com/ads/library` returns HTTP 403 and a `__rd_verify` bot challenge — verified directly, including via a rendering proxy. The old page-scraping collector therefore read ZERO ads on every search and then honestly reported "nobody advertises under this term". A locked door was indistinguishable from an empty market, and every downstream stage was correct arithmetic over nothing. `src/lib/admirror/sweep.ts` is DELETED; do not resurrect page scraping.
 - **Ads now arrive through a live Ad Library read API** (`src/lib/admirror/library-feed.ts`, key `SCRAPECREATORS_API_KEY`, server-only). Same public facts, plus creative artwork, platform list, Meta's own creative-version count, and `total_impressions` — a BANDED reach figure Meta publishes for some ads.
 - **Reach is the one performance figure in the app, and only where Meta published it.** New provenance kind `published_by_meta` (META badge, the only filled/lit badge). Bands print as bands ("10K–50K") — never narrowed to a point estimate. No figure renders as "reach not published", NEVER as zero. No spend, click or conversion figures exist anywhere; Meta publishes none.
@@ -84,3 +98,10 @@ Founders, in-house marketers and freelancers running paid social themselves, in 
 - **One variable per test round.** The planner never emits a round that moves hook and format together, and never invents a delivery cost: with no ad account connected the plan is un-costed and says so.
 - Message match is a WARNING, never a block — AdMirror does not fetch the destination page and will not refuse to deliver over a page it doesn't control.
 - Exported spreadsheet cells are neutralised against formula injection; the text came from an untrusted paste and is data, never a formula.
+
+## What exists today
+
+### MARKET-CONSOLE VISUAL SYSTEM (current)
+- The interface now uses a dark prediction-market console: compact data modules, a finely striped top rail, dense numerical readouts, and a single green signal for the live state and primary action.
+- Shared navigation, pipeline states, panels, and the entry flow all inherit that same market rhythm. The entry screen introduces AdMirror through its real research sequence rather than decorative creative frames.
+
