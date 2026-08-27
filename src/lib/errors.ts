@@ -317,13 +317,16 @@ function extractCode(input: unknown): string | undefined {
   if (!input) return undefined;
   if (typeof input === "string") return input.trim() || undefined;
 
-  const source = input as Record<string, any>;
+  type Loose = {
+    code?: unknown;
+    body?: { code?: unknown };
+    error?: { code?: unknown } | string;
+    statusText?: unknown;
+  };
+  const source = input as Loose;
+  const nested = typeof source.error === "object" ? source.error?.code : source.error;
   const candidate =
-    source.code ??
-    source.body?.code ??
-    source.error?.code ??
-    source.error ??
-    source.statusText;
+    source.code ?? source.body?.code ?? nested ?? source.statusText;
 
   if (typeof candidate === "string" && candidate.trim()) return candidate.trim();
   if (input instanceof Error && input.message.trim()) return input.message.trim();

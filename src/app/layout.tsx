@@ -1,14 +1,28 @@
 import type { Metadata } from "next";
 import Script from "next/script";
+import "@fontsource-variable/ibm-plex-sans";
+import "@fontsource-variable/jetbrains-mono";
 import "./globals.css";
+import { Toaster } from "@/components/ui/sonner";
+import { siteUrl } from "@/lib/site";
 
-// You MAY adjust the metadata and add fonts to match your design.
-// NEVER next/font/google — the build sandbox has no Google egress, so the fetch
-// hangs at compile and the preview renders blank. Use the zero-network stack in
-// globals.css, or self-host a .woff2 via next/font/local.
-export const metadata: Metadata = {
-  title: "App",
-};
+export async function generateMetadata(): Promise<Metadata> {
+  return {
+    metadataBase: new URL(await siteUrl()),
+    title: {
+      default: "AdMirror — their best angle, your ad",
+      template: "%s · AdMirror",
+    },
+    description:
+      "AdMirror researches your brand and its competitors, hands you ready-made public Meta Ad Library searches, ranks the evidence you submit, and turns the angle you pick into three original ad variants and a test plan.",
+    openGraph: {
+      title: "AdMirror — their best angle, your ad",
+      description:
+        "Capture competitor ads from the public Ad Library, rank them honestly against what you actually captured, and generate your own variants on the same angle.",
+      type: "website",
+    },
+  };
+}
 
 export default function RootLayout({
   children,
@@ -17,6 +31,7 @@ export default function RootLayout({
     <html lang="en">
       <body className="min-h-dvh antialiased">
         {children}
+        <Toaster position="bottom-right" />
         {/* Imagine Make preview runtime — only active when framed by the editor. */}
         <Script
           src="https://cdn-chatly.vyro.ai/chatly-make/sites-script/make-preview-runtime.js"

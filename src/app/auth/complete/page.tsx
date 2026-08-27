@@ -18,6 +18,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
 
 import { describeAuthError } from "@/lib/errors";
 
@@ -48,12 +49,14 @@ export default function AuthComplete() {
     }
 
     // No opener: the popup was blocked and the flow ran in the main window. There
-    // is nobody to report to, so show the outcome here.
+    // is nobody to report to, so show the outcome here. Deferred by a tick rather
+    // than set synchronously — an effect that sets state in its own body kicks off
+    // a cascading render, and this message is not urgent enough to warrant one.
     if (error) {
       const { message, cause } = describeAuthError(error);
       console.error("[auth] sign-in failed: %s", cause);
-      setFailure(message);
-      return;
+      const timer = window.setTimeout(() => setFailure(message), 0);
+      return () => window.clearTimeout(timer);
     }
     window.location.replace(after);
   }, []);
@@ -72,9 +75,9 @@ export default function AuthComplete() {
       {failure ? (
         <div style={{ maxWidth: "26rem", display: "grid", gap: "1rem" }}>
           <p style={{ margin: 0 }}>{failure}</p>
-          <a href="/" style={{ color: "inherit" }}>
+          <Link href="/" style={{ color: "inherit" }}>
             Back to the app
-          </a>
+          </Link>
         </div>
       ) : (
         <p>You&rsquo;re signed in — you can close this window.</p>
