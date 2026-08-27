@@ -36,8 +36,8 @@ export function ReaderStatus({
         </p>
         <p className="mt-1 max-w-[65ch] text-[12.5px] leading-relaxed text-muted-foreground">
           {context === "start"
-            ? "Until it is, searches come back unread — so AdMirror will say so plainly instead of telling you nobody advertises in your market. Everything else works: you can still set a run up, add the rivals you know, and enter ads you have seen yourself."
-            : "That is why nothing was read. It is a missing connection, not an empty market — no result on this screen means your rivals have stopped advertising. You can still add ads you have seen yourself, and they rank exactly the same way."}
+            ? "Until it is, searches come back unread \u2014 so AdMirror will say so plainly instead of telling you nobody advertises in your market. There is a route that needs nothing connected: the Ad Library is public, so you open the search in your own browser, copy the page, and AdMirror reads the ads straight off it. Set the run up as normal and collect that way."
+            : "That is why nothing was read automatically. It is a missing connection, not an empty market \u2014 no result on this screen means your rivals have stopped advertising. Collect them yourself instead: open the search in your own browser and paste the page into \u201cBring in ads yourself\u201d below. Those ads rank exactly the same way."}
         </p>
       </div>
     </div>

@@ -1,5 +1,9 @@
 # AdMirror
 
+**Latest build note:** Rival ads no longer depend on a connected reader. The Ad Library is public, so the collect screen hands the user the exact search, they open it in their own browser, copy the page, and AdMirror reads the ads straight off the paste — landing them in the same place, the same shape and the same ranking as automatically collected ads, under their own provenance ("read from the Library page in your browser"). A field the page did not show stays empty; nothing is guessed and no performance figure is written. The automatic reader is untouched and takes over the moment its connection is added.
+
+# AdMirror
+
 **Latest build note:** Collection is now hard to defeat: the ad reader retries a wobbly read instead of recording it as an empty market, a rival missed by a keyword search is looked up by name, and searches that could not be reached are shown separately from rivals that are genuinely quiet — with a one-press retry for just those.
 
 # AdMirror

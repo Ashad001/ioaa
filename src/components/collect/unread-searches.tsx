@@ -58,7 +58,9 @@ export function UnreadSearches({
                 </Plate>
                 <p className="mt-1 max-w-[65ch] text-[11.5px] leading-relaxed text-muted-foreground">
                   These weren&rsquo;t reached, so we know nothing about them either way. That is
-                  not the same as a rival running no ads.
+                  not the same as a rival running no ads. If reading again doesn&rsquo;t reach them,
+                  open each one in your own browser and paste the page into &ldquo;Bring in ads
+                  yourself&rdquo; below &mdash; that route always works.
                 </p>
               </div>
             </div>

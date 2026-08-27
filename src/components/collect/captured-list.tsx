@@ -113,6 +113,7 @@ export function CapturedList({ runId, items }: { runId: string; items: EvidenceR
           const platforms = item.platforms.split(",").filter(Boolean);
           const active = item.activeStatus === "active";
           const swept = item.libraryUrlProvenance === "swept_from_public_library";
+          const imported = item.libraryUrlProvenance === "read_in_your_browser";
 
           return (
             <article
@@ -152,6 +153,13 @@ export function CapturedList({ runId, items }: { runId: string; items: EvidenceR
                   {swept ? (
                     <span className="plate shrink-0 rounded-[3px] border border-chart-1/45 bg-chart-1/16 px-1.5 py-[3px] text-chart-1">
                       lib
+                    </span>
+                  ) : imported ? (
+                    <span
+                      className="plate shrink-0 rounded-[3px] border border-chart-2/45 bg-chart-2/16 px-1.5 py-[3px] text-chart-2"
+                      title="Read off the Library page you opened in your own browser."
+                    >
+                      brow
                     </span>
                   ) : (
                     <span className="plate shrink-0 rounded-[3px] border border-lamp-live/45 bg-lamp-live/18 px-1.5 py-[3px] text-lamp-live">

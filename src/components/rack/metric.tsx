@@ -19,6 +19,7 @@ const BADGE_STYLE: Record<ProvenanceKind, string> = {
   // only badge that reads as filled and lit rather than outlined.
   published_by_meta: "bg-primary text-primary-foreground border border-primary",
   swept_from_public_library: "bg-chart-1/16 text-chart-1 border border-chart-1/45",
+  read_in_your_browser: "bg-chart-2/16 text-chart-2 border border-chart-2/45",
   user_asserted: "bg-transparent text-primary border border-primary/60",
   derived_from_evidence: "bg-transparent text-chart-2 border border-chart-2/55",
   model_interpretation: "bg-transparent text-muted-foreground border border-dashed border-rack-seam",

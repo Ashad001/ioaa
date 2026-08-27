@@ -12,6 +12,7 @@ export const PROVENANCE_KINDS = [
   "observed_in_user_evidence",
   "published_by_meta",
   "swept_from_public_library",
+  "read_in_your_browser",
   "user_asserted",
   "derived_from_evidence",
   "model_interpretation",
@@ -51,6 +52,12 @@ export const PROVENANCE_META: Record<
     label: "Read from the public Ad Library",
     explain:
       "AdMirror read this out of the public Ad Library on the date shown. Nobody typed it. Meta publishes no spend, click or conversion figure for commercial ads, so none appears here — only the reach it does publish, on the ads that carry one.",
+  },
+  read_in_your_browser: {
+    short: "BROW",
+    label: "Read from the Library page in your browser",
+    explain:
+      "You opened the public Ad Library yourself and AdMirror read this straight off the page you copied. Nobody typed it and nothing was estimated \u2014 a field the page did not show stays empty. Meta publishes no spend, click or conversion figure for commercial ads, so none appears here either.",
   },
   user_asserted: {
     short: "YOU",

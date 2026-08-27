@@ -18,11 +18,12 @@
  */
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
-import { ChevronDown, RefreshCw } from "lucide-react";
+import { ChevronDown, Globe, PenLine, RefreshCw } from "lucide-react";
 import { toast } from "sonner";
 
 import { closeBatch } from "@/app/actions/evidence";
 import { resweep } from "@/app/actions/autopilot";
+import { BrowserImport } from "@/components/collect/browser-import";
 import { CaptureComposer } from "@/components/collect/capture-composer";
 import { CapturedList } from "@/components/collect/captured-list";
 import { ReaderStatus } from "@/components/run/reader-status";
@@ -57,12 +58,25 @@ export function CollectWorkspace({
   const [pending, startTransition] = useTransition();
   const [sweeping, setSweeping] = useState(false);
   const [activeSearchId, setActiveSearchId] = useState<string | null>(searches[0]?.id ?? null);
-  const [composerOpen, setComposerOpen] = useState(false);
+  const [composerOpen, setComposerOpen] = useState(!readerConnected);
+  /**
+   * Two ways to fill a gap, and the right default depends on the truth of the
+   * moment: with no reader connected, importing from the user's own browser is
+   * the ONLY route that returns real rival ads, so it opens first.
+   */
+  const [intake, setIntake] = useState<"browser" | "manual">(
+    readerConnected ? "manual" : "browser",
+  );
 
   const activeSearch = searches.find((row) => row.id === activeSearchId) ?? null;
   const sweptCount = items.filter(
     (item) => item.libraryUrlProvenance === "swept_from_public_library",
   ).length;
+  /** Ads the user brought back from the Library page in their own browser. */
+  const importedCount = items.filter(
+    (item) => item.libraryUrlProvenance === "read_in_your_browser",
+  ).length;
+  const typedCount = items.length - sweptCount - importedCount;
   const withArt = items.filter((item) => Boolean(item.artefactUrl || item.creativeUrl)).length;
 
   return (
@@ -81,14 +95,17 @@ export function CollectWorkspace({
           <div className="min-w-0">
             <Plate className="block">The contact sheet</Plate>
             <p className="mt-0.5 min-w-0 text-[11.5px] leading-relaxed text-muted-foreground">
-              {sweptCount > 0 ? (
+              {sweptCount + importedCount > 0 ? (
                 <>
-                  <EdgeCode>{sweptCount}</EdgeCode> live ads collected
-                  {items.length > sweptCount ? ` · ${items.length - sweptCount} added by you` : ""}
+                  <EdgeCode>{sweptCount + importedCount}</EdgeCode> live ads on the sheet
+                  {importedCount > 0 ? ` · ${importedCount} from your browser` : ""}
+                  {typedCount > 0 ? ` · ${typedCount} added by hand` : ""}
                   {withArt > 0 ? ` · ${withArt} with artwork` : ""}
                 </>
               ) : (
-                "Nothing collected automatically yet — sweep again, or add what you saw."
+                readerConnected
+                  ? "Nothing collected automatically yet — sweep again, or add what you saw."
+                  : "Nothing read automatically — bring the ads back from your own browser below. It works with nothing connected."
               )}
             </p>
           </div>
@@ -146,9 +163,9 @@ export function CollectWorkspace({
             className="flex w-full min-w-0 items-center justify-between gap-3 px-4 py-2.5 text-left transition-colors duration-150 ease-out hover:bg-card/60"
           >
             <span className="min-w-0">
-              <Plate className="block">Add an ad yourself</Plate>
+              <Plate className="block">Bring in ads yourself</Plate>
               <span className="mt-0.5 block text-[11.5px] leading-relaxed text-muted-foreground">
-                For anything the sweep couldn&rsquo;t reach, or an ad you spotted in the wild.
+                Import a Library page you opened in your own browser, or enter one ad by hand.
               </span>
             </span>
             <ChevronDown
@@ -162,20 +179,67 @@ export function CollectWorkspace({
           </button>
 
           {composerOpen ? (
-            <CaptureComposer
-              runId={run.id}
-              searchReferenceId={activeSearchId}
-              searchLabel={
-                activeSearch ? `${activeSearch.competitorName} · ${activeSearch.country}` : null
-              }
-              market={
-                activeSearch?.country
-                  ? `${run.marketLabel} (${activeSearch.country})`
-                  : run.marketLabel
-              }
-              language={activeSearch?.language ?? ""}
-              itemCount={items.length}
-            />
+            <>
+              {/* Two intake routes, one switch. `min-w-0` on both cells because a
+                  label in a fixed-width track will otherwise push its own cell
+                  wider than the rail and collide with its neighbour. */}
+              <div className="grid min-w-0 grid-cols-2 gap-2 px-4 pb-3">
+                {(
+                  [
+                    { id: "browser", label: "From your browser", icon: Globe },
+                    { id: "manual", label: "One ad by hand", icon: PenLine },
+                  ] as const
+                ).map((option) => {
+                  const Icon = option.icon;
+                  const on = intake === option.id;
+                  return (
+                    <button
+                      key={option.id}
+                      type="button"
+                      onClick={() => setIntake(option.id)}
+                      aria-pressed={on}
+                      className={cn(
+                        "flex min-w-0 items-center gap-2 rounded-sm border px-2.5 py-2 text-left transition-colors duration-150 ease-out",
+                        on
+                          ? "border-primary/60 bg-primary/[0.09] text-foreground"
+                          : "border-border/70 bg-transparent text-muted-foreground hover:bg-card/60",
+                      )}
+                    >
+                      <Icon size={13} strokeWidth={1.7} className="shrink-0" />
+                      <span className="min-w-0 flex-1 truncate text-[12px]">{option.label}</span>
+                    </button>
+                  );
+                })}
+              </div>
+
+              {intake === "browser" ? (
+                <BrowserImport
+                  runId={run.id}
+                  search={activeSearch}
+                  market={
+                    activeSearch?.country
+                      ? `${run.marketLabel} (${activeSearch.country})`
+                      : run.marketLabel
+                  }
+                  language={activeSearch?.language ?? ""}
+                />
+              ) : (
+                <CaptureComposer
+                  runId={run.id}
+                  searchReferenceId={activeSearchId}
+                  searchLabel={
+                    activeSearch ? `${activeSearch.competitorName} · ${activeSearch.country}` : null
+                  }
+                  market={
+                    activeSearch?.country
+                      ? `${run.marketLabel} (${activeSearch.country})`
+                      : run.marketLabel
+                  }
+                  language={activeSearch?.language ?? ""}
+                  itemCount={items.length}
+                />
+              )}
+            </>
           ) : null}
         </div>
       </div>
