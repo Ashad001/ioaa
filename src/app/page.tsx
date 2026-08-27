@@ -7,6 +7,7 @@ import { RackShell } from "@/components/rack/shell";
 import { EdgeCode, Plate } from "@/components/rack/plate";
 import { Button } from "@/components/ui/button";
 import { getUser } from "@/lib/auth";
+import { feedConfigured } from "@/lib/admirror/library-feed";
 
 export default async function HomePage() {
   const user = await getUser();
@@ -75,7 +76,7 @@ export default async function HomePage() {
         </Button>
       }
     >
-      <IntakeForm />
+      <IntakeForm readerConnected={feedConfigured()} />
     </RackShell>
   );
 }

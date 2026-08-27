@@ -24,6 +24,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { EdgeCode, Plate } from "@/components/rack/plate";
+import { ReaderStatus } from "@/components/run/reader-status";
 import { OBJECTIVES } from "@/lib/admirror/ad-library";
 import { cn } from "@/lib/utils";
 
@@ -49,7 +50,16 @@ function EmptySheet({ armed }: { armed: boolean }) {
   );
 }
 
-export function IntakeForm() {
+export function IntakeForm({
+  /**
+   * Whether the ad reader is connected. Read on the SERVER and passed in as a
+   * boolean — the key never reaches the browser. Said here, before a run starts,
+   * because after forty seconds of a progress lamp is the wrong time to learn it.
+   */
+  readerConnected = true,
+}: {
+  readerConnected?: boolean;
+}) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
   const [website, setWebsite] = useState("");
@@ -84,6 +94,12 @@ export function IntakeForm() {
   return (
     <div className="min-h-0 flex-1 overflow-y-auto">
       <div className="mx-auto w-full max-w-[1180px] px-4 py-8 sm:px-6 sm:py-12">
+        {readerConnected ? null : (
+          <div className="mb-7 min-w-0">
+            <ReaderStatus connected={readerConnected} context="start" />
+          </div>
+        )}
+
         <div className="grid min-w-0 gap-8 lg:grid-cols-[minmax(0,1fr)_minmax(0,420px)] lg:gap-12">
           {/* The thesis: your market's ads, laid out as a sheet you read. */}
           <div className="min-w-0">

@@ -8,6 +8,8 @@ import { CompetitorMap, type SetAsideRow } from "@/components/run/competitor-map
 import { MarketChart, type MarketAd } from "@/components/run/market-chart";
 import { RunNav } from "@/components/run/run-nav";
 import { readReach } from "@/lib/admirror/reach";
+import { ReaderStatus } from "@/components/run/reader-status";
+import { feedConfigured } from "@/lib/admirror/library-feed";
 import { EdgeCode, Lamp, Panel, Plate, Readout } from "@/components/rack/plate";
 import { PaneHeader, RackShell } from "@/components/rack/shell";
 import { Button } from "@/components/ui/button";
@@ -68,6 +70,7 @@ export default async function RunConsolePage({ params }: { params: Promise<{ id:
   }
 
   const objectives = fresh.objectives.split(",").filter(Boolean);
+  const readerConnected = feedConfigured();
   const hasEvidence = items.length > 0;
   const awaitingGate = fresh.status === "AWAITING_GATE";
   const siteRead = dossier?.siteRead;
@@ -154,7 +157,8 @@ export default async function RunConsolePage({ params }: { params: Promise<{ id:
           <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_320px]">
             <div className="min-w-0 space-y-4">
               <Panel label="Reading the Ad Library">
-                <div className="px-4 py-4">
+                <div className="space-y-4 px-4 py-4">
+                  <ReaderStatus connected={readerConnected} context="run" />
                   <AutopilotRunner
                     runId={id}
                     hasCompetitors={competitors.length > 0}

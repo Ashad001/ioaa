@@ -7,6 +7,7 @@ import { PaneHeader, RackShell } from "@/components/rack/shell";
 import { Button } from "@/components/ui/button";
 import { getUser } from "@/lib/auth";
 import { computeCoverage, type ScoreItem } from "@/lib/admirror/scoring";
+import { feedConfigured } from "@/lib/admirror/library-feed";
 import {
   getBatches,
   getCompetitors,
@@ -80,6 +81,7 @@ export default async function CollectPage({ params }: { params: Promise<{ id: st
         items={items}
         batch={batch}
         coverage={coverage}
+        readerConnected={feedConfigured()}
       />
     </RackShell>
   );

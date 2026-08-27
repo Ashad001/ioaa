@@ -25,6 +25,7 @@ import { closeBatch } from "@/app/actions/evidence";
 import { resweep } from "@/app/actions/autopilot";
 import { CaptureComposer } from "@/components/collect/capture-composer";
 import { CapturedList } from "@/components/collect/captured-list";
+import { ReaderStatus } from "@/components/run/reader-status";
 import { SavedSearches } from "@/components/collect/saved-searches";
 import { CoverageMeter } from "@/components/rack/coverage";
 import { EdgeCode, Plate } from "@/components/rack/plate";
@@ -41,12 +42,15 @@ export function CollectWorkspace({
   items,
   batch,
   coverage,
+  /** Read on the server; only the boolean crosses to the browser. */
+  readerConnected = true,
 }: {
   run: RunRow;
   searches: SearchRow[];
   items: EvidenceRow[];
   batch: BatchRow | null;
   coverage: CoverageResult;
+  readerConnected?: boolean;
 }) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
@@ -111,6 +115,14 @@ export function CollectWorkspace({
             <span className="min-w-0 truncate">{pending ? "Reading…" : "Sweep again"}</span>
           </Button>
         </div>
+
+        {/* WHY an empty sheet is empty. Without this, a missing connection and a
+            market with no advertisers look identical on this screen. */}
+        {readerConnected ? null : (
+          <div className="border-b border-border px-4 py-3">
+            <ReaderStatus connected={readerConnected} context="run" />
+          </div>
+        )}
 
         {sweeping ? (
           <div className="border-b border-border px-4 py-3">
