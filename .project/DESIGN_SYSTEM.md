@@ -1,3 +1,10 @@
+# AdMirror
+
+## Latest interface pass
+- The shared market header uses a two-tier trading-desk structure: primary sections above, live library status and the current analysis below.
+- Analysis flow items use a restrained active signal, a thin bottom marker, compact tabular stage numbers, and no decorative side rules.
+- Entry and approval copy names the exact action and sequence: build a competitor list, review it, approve it, then collect.
+
 <!-- OWNER: Design / Build · READERS: Build, Landing, SEO -->
 # Design System
 

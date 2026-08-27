@@ -1,3 +1,7 @@
+# AdMirror
+
+**Latest build note:** The shared experience now uses a two-level market desk header, clearer analysis-stage navigation, and direct decision copy across the starting and approval moments.
+
 <!-- OWNER: Build (with the user) · READERS: every agent · READ THIS FIRST -->
 # AdMirror
 
