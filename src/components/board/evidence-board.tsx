@@ -35,9 +35,34 @@ import {
   type MatrixChoice,
 } from "@/lib/admirror/matrix";
 import { asProvenance } from "@/lib/admirror/provenance";
+import { StatusChip } from "@/components/watch/status-strip";
+import type { AdStatusState, MatchRule } from "@/lib/admirror/watchtower";
 import { RANK_CAPTION, type CoverageResult } from "@/lib/admirror/scoring";
 import type { EvidenceRow, RunRow, ScoreRow } from "@/lib/admirror/queries";
 import { cn } from "@/lib/utils";
+
+/**
+ * One ad's standing across captures, as the board needs it.
+ *
+ * `rankDelta` is null whenever there is no previous COMPARABLE capture to move
+ * against — and the card then draws a dash. A zero there would claim "no
+ * movement", which is a different statement from "nothing to compare to", and
+ * the second one is the truth more often than the first.
+ */
+export type BoardHistory = {
+  state: AdStatusState;
+  absences: number;
+  rankDelta: number | null;
+  capturesSeen: number;
+  matchRule?: MatchRule;
+  basis?: {
+    snapshotLabel?: string;
+    capturedAt?: string;
+    comparable?: boolean;
+    previousLabel?: string | null;
+    counterNote?: string;
+  };
+};
 
 export function EvidenceBoard({
   run,
@@ -45,12 +70,15 @@ export function EvidenceBoard({
   scores,
   coverage,
   alreadyGenerated,
+  history,
 }: {
   run: RunRow;
   items: EvidenceRow[];
   scores: ScoreRow[];
   coverage: CoverageResult;
   alreadyGenerated: boolean;
+  /** Keyed by evidence item id. Empty on a first-ever capture. */
+  history?: Record<string, BoardHistory>;
 }) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
@@ -133,6 +161,7 @@ export function EvidenceBoard({
                         const platforms = item.platforms.split(",").filter(Boolean);
                         const isSelected = selected.includes(item.id);
                         const hasArt = Boolean(item.creativeUrl ?? item.artefactUrl);
+                        const past = history?.[item.id] ?? null;
                         return (
                           <article
                             key={item.id}
@@ -212,6 +241,27 @@ export function EvidenceBoard({
                                       .map((key) => PLATFORM_LABELS[key] ?? key)
                                       .join(" · ")}
                                   </MetricChip>
+                                </div>
+                              ) : null}
+                              {past ? (
+                                <div className="mt-1.5 flex min-w-0 flex-wrap items-center gap-1.5">
+                                  <StatusChip
+                                    state={past.state}
+                                    absences={past.absences}
+                                    basis={past.basis}
+                                    matchRule={past.matchRule}
+                                  />
+                                  <span className="tabular shrink-0 text-[11px] text-muted-foreground">
+                                    {past.capturesSeen} capture{past.capturesSeen === 1 ? "" : "s"}
+                                    {" · "}
+                                    {past.rankDelta === null
+                                      ? "— no comparable capture before this"
+                                      : past.rankDelta === 0
+                                        ? "same place in the results"
+                                        : past.rankDelta > 0
+                                          ? `up ${past.rankDelta} in the results`
+                                          : `down ${Math.abs(past.rankDelta)} in the results`}
+                                  </span>
                                 </div>
                               ) : null}
                             </div>

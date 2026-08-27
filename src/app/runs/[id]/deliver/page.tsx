@@ -4,6 +4,7 @@ import { notFound, redirect } from "next/navigation";
 import { RunNav } from "@/components/run/run-nav";
 import { ExportButtons } from "@/components/deliver/export-buttons";
 import { ProvenanceRecord } from "@/components/deliver/provenance-record";
+import { ShipPanel, type ShippableVariant } from "@/components/results/ship-panel";
 import { TestPlanRounds } from "@/components/deliver/test-plan-rounds";
 import { Panel, Plate, Readout } from "@/components/rack/plate";
 import { PaneHeader, RackShell, SourceModeNotice } from "@/components/rack/shell";
@@ -14,7 +15,15 @@ import {
   countSharedBodies,
   parseGates,
 } from "@/lib/admirror/deliver";
-import { getBatches, getGate, getItems, getRun, getSteps, getVariants } from "@/lib/admirror/queries";
+import {
+  getBatches,
+  getGate,
+  getItems,
+  getRun,
+  getShippedForRun,
+  getSteps,
+  getVariants,
+} from "@/lib/admirror/queries";
 
 export default async function DeliverPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -24,13 +33,29 @@ export default async function DeliverPage({ params }: { params: Promise<{ id: st
   const current = await getRun(id, user.id);
   if (!current) notFound();
 
-  const [steps, variants, items, gate, batches] = await Promise.all([
+  const [steps, variants, items, gate, batches, shipped] = await Promise.all([
     getSteps(id),
     getVariants(id),
     getItems(id),
     getGate(id),
     getBatches(id),
+    getShippedForRun(id, user.id),
   ]);
+
+  // The join that closes the loop: which of these cells the user actually ran.
+  const shippedByVariant = new Map(
+    shipped
+      .filter((row) => row.variantId)
+      .map((row) => [row.variantId as string, row.id]),
+  );
+  const shippable: ShippableVariant[] = variants.map((variant) => ({
+    id: variant.id,
+    hookLabel: variant.hookLabel,
+    formatAxis: variant.formatAxis,
+    assetKind: variant.assetKind,
+    testRole: variant.testRole,
+    shippedId: shippedByVariant.get(variant.id) ?? null,
+  }));
 
   const record = buildProvenanceRecord({ variants, items });
   const gates = variants[0] ? parseGates(variants[0]) : {};
@@ -151,6 +176,8 @@ export default async function DeliverPage({ params }: { params: Promise<{ id: st
                   </ul>
                 </Panel>
               ) : null}
+
+              <ShipPanel runId={id} variants={shippable} />
             </div>
           )}
         </div>

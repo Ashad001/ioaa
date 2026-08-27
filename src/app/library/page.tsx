@@ -1,13 +1,19 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { Plus } from "lucide-react";
+import { Eye, Plus } from "lucide-react";
 
 import { CoverageBand } from "@/components/rack/coverage";
 import { Lamp, Plate } from "@/components/rack/plate";
 import { PaneHeader, RackShell } from "@/components/rack/shell";
 import { Button } from "@/components/ui/button";
+import { isDue } from "@/lib/admirror/clock";
 import { getUser } from "@/lib/auth";
-import { getBatches, getVariants, listRunsForUser } from "@/lib/admirror/queries";
+import {
+  getBatches,
+  getVariants,
+  listRunsForUser,
+  listWatchesForUser,
+} from "@/lib/admirror/queries";
 
 const STATUS_COPY: Record<string, { label: string; lamp: "live" | "hold" | "cold" | "done" }> = {
   INTAKE: { label: "Researching", lamp: "hold" },
@@ -22,7 +28,16 @@ export default async function LibraryPage() {
   const user = await getUser();
   if (!user) redirect("/");
 
-  const runs = await listRunsForUser(user.id);
+  const [runs, watched] = await Promise.all([
+    listRunsForUser(user.id),
+    listWatchesForUser(user.id),
+  ]);
+
+  // Which markets are due another look. A watch is a reminder, not a crawler —
+  // nothing has been read since the date shown, and the row says so.
+  const watchByRun = new Map(
+    watched.filter((entry) => entry.watch.enabled).map((entry) => [entry.run.id, entry.watch]),
+  );
 
   const enriched = await Promise.all(
     runs.map(async (row) => {
@@ -36,8 +51,21 @@ export default async function LibraryPage() {
     <RackShell
       crumb="Your runs"
       actions={
-        <Button size="sm" render={<Link href="/" />}><Plus size={14} strokeWidth={1.8} />
-            <span className="min-w-0 truncate">New run</span></Button>
+        <>
+          <Button variant="ghost" size="sm" render={<Link href="/watch" />}>
+            <span className="min-w-0 truncate">Watchtower</span>
+          </Button>
+          <Button variant="ghost" size="sm" render={<Link href="/results" />}>
+            <span className="min-w-0 truncate">Results</span>
+          </Button>
+          <Button variant="ghost" size="sm" render={<Link href="/patterns" />}>
+            <span className="min-w-0 truncate">Patterns</span>
+          </Button>
+          <Button size="sm" render={<Link href="/" />}>
+            <Plus size={14} strokeWidth={1.8} />
+            <span className="min-w-0 truncate">New run</span>
+          </Button>
+        </>
       }
     >
       <PaneHeader title="Run library" hint="Every brand and market you've worked, and what came out." />
@@ -57,6 +85,9 @@ export default async function LibraryPage() {
             <div className="divide-y divide-border overflow-hidden rounded-sm border border-border">
               {enriched.map(({ row, latest, captures, variants }) => {
                 const status = STATUS_COPY[row.status] ?? { label: row.status, lamp: "cold" as const };
+                const watch = watchByRun.get(row.id) ?? null;
+                const dueAt = watch?.nextReminderAt ?? null;
+                const due = isDue(dueAt);
                 const href =
                   row.status === "DELIVERED"
                     ? `/runs/${row.id}/creative`
@@ -86,6 +117,25 @@ export default async function LibraryPage() {
                         {variants} variant{variants === 1 ? "" : "s"}
                       </p>
                     </div>
+                    {watch ? (
+                      <span
+                        className={
+                          "plate hidden shrink-0 items-center gap-1.5 rounded-[3px] border px-1.5 py-[3px] leading-none sm:inline-flex " +
+                          (due
+                            ? "border-primary/60 text-primary"
+                            : "border-border text-muted-foreground")
+                        }
+                      >
+                        <Eye size={11} strokeWidth={1.8} className="shrink-0" />
+                        <span className="min-w-0 truncate">
+                          {due
+                            ? "due a look"
+                            : dueAt
+                              ? `look ${dueAt.toLocaleDateString("en-GB", { day: "numeric", month: "short" })}`
+                              : "watching"}
+                        </span>
+                      </span>
+                    ) : null}
                     {latest?.coverageBand ? (
                       <CoverageBand
                         band={latest.coverageBand as "thin" | "partial" | "substantial"}

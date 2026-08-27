@@ -119,13 +119,21 @@ export function SourceModeNotice({
   );
 }
 
-export function StepRail({ children }: { children: ReactNode }) {
+export function StepRail({
+  children,
+  footer,
+}: {
+  children: ReactNode;
+  /** Sits below the numbered steps — for things that aren't a step at all. */
+  footer?: ReactNode;
+}) {
   return (
     <nav className="flex flex-col lg:h-full">
       <div className="flex items-center gap-2 border-b border-sidebar-border px-4 py-2.5">
         <Plate>Pipeline</Plate>
       </div>
       <div className="min-h-0 flex-1 overflow-y-auto py-1">{children}</div>
+      {footer ? <div className="min-w-0 shrink-0">{footer}</div> : null}
     </nav>
   );
 }

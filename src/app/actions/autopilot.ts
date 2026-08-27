@@ -32,6 +32,7 @@ import {
   runStep,
   searchReference,
 } from "@/db/schema";
+import { getActiveWeights } from "@/lib/admirror/queries";
 import { requireUser } from "@/lib/auth";
 import { describeDataError } from "@/lib/errors";
 import { buildSearchUrl, describeFilters, type SearchSpec } from "@/lib/admirror/ad-library";
@@ -44,6 +45,7 @@ import {
   type ScoreItem,
 } from "@/lib/admirror/scoring";
 import { sweepMany, type SweptAd } from "@/lib/admirror/sweep";
+import { recordSnapshot } from "@/lib/admirror/watch-record";
 import {
   advanceProgress,
   beginProgress,
@@ -652,7 +654,7 @@ export async function autoCollect(runId: string): Promise<ActionResult> {
         }
       } else {
         // Same ads still in an open collection — rank it so the board isn't stale.
-        await analyse(runId, targetBatch.id);
+        await analyse(runId, targetBatch.id, user.id);
       }
 
       await setProgressPhase(runId, "done", "no new ads since last sweep");
@@ -672,7 +674,7 @@ export async function autoCollect(runId: string): Promise<ActionResult> {
     );
 
     await setProgressPhase(runId, "scoring", `${collected} ads collected`);
-    await analyse(runId, targetBatch.id);
+    await analyse(runId, targetBatch.id, user.id);
     await setProgressPhase(runId, "done", `${collected} ads collected`);
 
     revalidatePath(`/runs/${runId}`);
@@ -754,7 +756,7 @@ function sweptToEvidence(
  * Same arithmetic as the manual close — the scores are computed by the same
  * module, so a swept board and a hand-captured board are scored identically.
  */
-async function analyse(runId: string, batchId: string) {
+async function analyse(runId: string, batchId: string, userId: string) {
   await setStep(runId, "EVIDENCE_NORMALIZE", "running");
 
   const items = await db
@@ -837,11 +839,14 @@ async function analyse(runId: string, batchId: string) {
   );
   const now = new Date();
   const refs = batchReferences(scoreItems, now);
+  // The weighting the user has accepted, or the human-chosen default. A merely
+  // proposed vector is ignored here by design — that is the whole guarantee.
+  const weights = await getActiveWeights(userId);
 
   await db.delete(adScore).where(eq(adScore.batchId, batchId));
 
   for (const scoreItem of scoreItems) {
-    const result = computeEbos(scoreItem, refs, now);
+    const result = computeEbos(scoreItem, refs, now, weights);
     await db.insert(adScore).values({
       evidenceItemId: scoreItem.id,
       runId,
@@ -882,6 +887,10 @@ async function analyse(runId: string, batchId: string) {
     .update(run)
     .set({ status: "AWAITING_GATE", stepCursor: "8", updatedAt: new Date() })
     .where(eq(run.id, runId));
+
+  // The watchtower entry for this sweep. BOTH close paths must file one, or the
+  // market's history gains a gap that looks exactly like a quiet fortnight.
+  await recordSnapshot({ runId, batchId });
 }
 
 /**

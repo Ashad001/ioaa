@@ -9,7 +9,14 @@ import { PaneHeader, RackShell, SourceModeNotice } from "@/components/rack/shell
 import { Button } from "@/components/ui/button";
 import { getUser } from "@/lib/auth";
 import { assessComparability, buildDiff, THREE_SNAPSHOT_RULE } from "@/lib/admirror/diff";
-import { getBatches, getItems, getRun, getSteps } from "@/lib/admirror/queries";
+import {
+  getBatches,
+  getItems,
+  getRun,
+  getSnapshots,
+  getSteps,
+} from "@/lib/admirror/queries";
+import { explainConditionGap, type DeclaredFilters } from "@/lib/admirror/watchtower";
 
 export default async function TimelinePage({
   params,
@@ -26,7 +33,11 @@ export default async function TimelinePage({
   const current = await getRun(id, user.id);
   if (!current) notFound();
 
-  const [steps, batches] = await Promise.all([getSteps(id), getBatches(id)]);
+  const [steps, batches, snapshots] = await Promise.all([
+    getSteps(id),
+    getBatches(id),
+    getSnapshots(id),
+  ]);
   const closed = batches.filter((batch) => batch.state === "closed");
 
   const newer = closed.find((batch) => batch.id === b) ?? closed[0] ?? null;
@@ -41,6 +52,27 @@ export default async function TimelinePage({
     older && newer
       ? assessComparability({ older, newer, olderItems, newerItems })
       : null;
+
+  /**
+   * The RECORDED conditions each capture ran under. This is the stronger test:
+   * the diff module compares what came back, while these are the questions that
+   * were asked. A country filter changed between two captures invalidates the
+   * comparison even when the returned ads happen to look similar.
+   */
+  const snapshotFor = (batchId: string | undefined) =>
+    batchId ? snapshots.find((row) => row.batchId === batchId) ?? null : null;
+  const olderSnapshot = snapshotFor(older?.id);
+  const newerSnapshot = snapshotFor(newer?.id);
+  const conditionGaps =
+    olderSnapshot && newerSnapshot
+      ? explainConditionGap(
+          JSON.parse(olderSnapshot.declaredFilters) as DeclaredFilters,
+          JSON.parse(newerSnapshot.declaredFilters) as DeclaredFilters,
+        )
+      : [];
+  const sameQuestion =
+    Boolean(olderSnapshot && newerSnapshot) &&
+    olderSnapshot?.comparableHash === newerSnapshot?.comparableHash;
   const buckets =
     older && newer && comparability
       ? buildDiff({ olderItems, newerItems, comparable: comparability.comparable })
@@ -58,7 +90,12 @@ export default async function TimelinePage({
       }
       nav={<RunNav runId={id} steps={steps} activeStep="EVIDENCE_RANK" />}
       actions={
-        <Button variant="ghost" size="sm" render={<Link href={`/runs/${id}/board`} />}><span className="min-w-0 truncate">Board</span></Button>
+        <div className="flex min-w-0 items-center gap-2">
+          <Button variant="ghost" size="sm" render={<Link href={`/runs/${id}/watch`} />}>
+            <span className="min-w-0 truncate">Watchtower</span>
+          </Button>
+          <Button variant="ghost" size="sm" render={<Link href={`/runs/${id}/board`} />}><span className="min-w-0 truncate">Board</span></Button>
+        </div>
       }
     >
       <PaneHeader
@@ -105,7 +142,7 @@ export default async function TimelinePage({
                     ))}
                   </div>
 
-                  {comparability && !comparability.comparable ? (
+                  {comparability && (!comparability.comparable || conditionGaps.length > 0) ? (
                     <div className="mt-3.5 flex min-w-0 items-start gap-3 rounded-sm border border-lamp-alert/40 bg-lamp-alert/[0.08] px-3.5 py-3">
                       <AlertTriangle size={15} strokeWidth={1.7} className="mt-0.5 shrink-0 text-lamp-alert" />
                       <div className="min-w-0">
@@ -113,11 +150,16 @@ export default async function TimelinePage({
                           These snapshots are not directly comparable.
                         </p>
                         <ul className="mt-1.5 space-y-1">
-                          {comparability.differences.map((difference) => (
-                            <li key={difference} className="text-[12px] leading-relaxed text-foreground/85">
-                              {difference}
-                            </li>
-                          ))}
+                          {[...new Set([...conditionGaps, ...comparability.differences])].map(
+                            (difference) => (
+                              <li
+                                key={difference}
+                                className="text-[12px] leading-relaxed text-foreground/85"
+                              >
+                                {difference}
+                              </li>
+                            ),
+                          )}
                         </ul>
                         <p className="mt-2 text-[11.5px] leading-relaxed text-muted-foreground">
                           Recapture with the same saved searches and filters for a diff you can lean on.
@@ -126,7 +168,9 @@ export default async function TimelinePage({
                     </div>
                   ) : (
                     <p className="mt-3.5 text-[12px] leading-relaxed text-lamp-live">
-                      Same saved searches, same markets, similar volume — this diff is directly comparable.
+                      {sameQuestion
+                        ? "Same saved searches, same filters, similar volume — this diff is directly comparable, and it counts towards an ad's absence record."
+                        : "Same saved searches, same markets, similar volume — this diff is directly comparable."}
                     </p>
                   )}
                 </div>

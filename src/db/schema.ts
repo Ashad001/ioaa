@@ -531,3 +531,508 @@ export const evidenceItemRelations = relations(evidenceItem, ({ one }) => ({
     references: [adScore.evidenceItemId],
   }),
 }));
+
+/**
+ * THE WATCHTOWER — a sweep remembered as a dated, comparable snapshot.
+ *
+ * A single closed capture is a photograph of one afternoon. The intelligence in
+ * competitive creative is in the derivative: what appeared, what stopped
+ * appearing, whose angle is being repeated more. That derivative is only honest
+ * if the app can say WHETHER TWO CAPTURES WERE EVEN COMPARABLE — same searches,
+ * same country, same language, same media filter. Hence `comparableHash`: two
+ * snapshots are comparable only when their hashes match, and the components are
+ * stored alongside so the screen can name WHICH condition differs instead of just
+ * refusing to compare.
+ */
+export const snapshot = pgTable(
+  "snapshot",
+  {
+    id: text("id")
+      .primaryKey()
+      .$defaultFn(() => crypto.randomUUID()),
+    runId: text("run_id")
+      .notNull()
+      .references(() => run.id, { onDelete: "cascade" }),
+    batchId: text("batch_id")
+      .notNull()
+      .references(() => evidenceBatch.id, { onDelete: "cascade" }),
+    label: text("label").notNull().default(""),
+    capturedAt: timestamp("captured_at").notNull().defaultNow(),
+    itemCount: text("item_count").notNull().default("0"),
+    coverageScore: text("coverage_score"),
+    coverageBand: text("coverage_band"),
+    /** Hash of the declared conditions. Equal hash = comparable snapshots. */
+    comparableHash: text("comparable_hash").notNull().default(""),
+    /** JSON text: the conditions themselves, so the UI can name the difference. */
+    declaredFilters: text("declared_filters").notNull().default("{}"),
+    /** Sequence number within the run — 1 is the first ever snapshot. */
+    ordinal: text("ordinal").notNull().default("1"),
+    createdAt: timestamp("created_at").notNull().defaultNow(),
+  },
+  (t) => [index("snapshot_run_idx").on(t.runId)],
+);
+
+/**
+ * One ad, seen or not seen, in one snapshot.
+ *
+ * `matchRule` records HOW this observation was tied to the same ad in an earlier
+ * snapshot — by its Library link, by identical copy, or by advertiser + headline.
+ * A match the user cannot verify is a diff they will not trust, so the rule is
+ * shown next to the claim rather than kept internal.
+ */
+export const adObservation = pgTable(
+  "ad_observation",
+  {
+    id: text("id")
+      .primaryKey()
+      .$defaultFn(() => crypto.randomUUID()),
+    runId: text("run_id")
+      .notNull()
+      .references(() => run.id, { onDelete: "cascade" }),
+    snapshotId: text("snapshot_id")
+      .notNull()
+      .references(() => snapshot.id, { onDelete: "cascade" }),
+    /** The stable identity of the ad across snapshots. */
+    adKey: text("ad_key").notNull(),
+    /** The item in THIS snapshot, when it was observed. Null when absent. */
+    evidenceItemId: text("evidence_item_id").references(() => evidenceItem.id, {
+      onDelete: "set null",
+    }),
+    observed: boolean("observed").notNull().default(true),
+    advertiser: text("advertiser").notNull().default(""),
+    headline: text("headline").notNull().default(""),
+    conceptKey: text("concept_key").notNull().default(""),
+    conceptLabel: text("concept_label").notNull().default(""),
+    variantCount: text("variant_count").notNull().default("1"),
+    copyHash: text("copy_hash").notNull().default(""),
+    assetHash: text("asset_hash").notNull().default(""),
+    /** library_link · identical_copy · advertiser_and_headline */
+    matchRule: text("match_rule").notNull().default("advertiser_and_headline"),
+    createdAt: timestamp("created_at").notNull().defaultNow(),
+  },
+  (t) => [
+    index("ad_observation_run_idx").on(t.runId),
+    index("ad_observation_snapshot_idx").on(t.snapshotId),
+    index("ad_observation_key_idx").on(t.adKey),
+  ],
+);
+
+/**
+ * The standing status of one ad across every snapshot of a run.
+ *
+ * THE RULE THIS TABLE EXISTS TO ENFORCE: an ad absent from a capture is not an
+ * observation about Meta, it is an observation about the capture. So
+ * `likely_no_longer_active` is unreachable below three CONSECUTIVE COMPARABLE
+ * absences, and a non-comparable snapshot does not move `consecutiveAbsences` at
+ * all — a user who re-captured with a different country filter has produced no
+ * evidence about that ad, and the counter must not pretend otherwise.
+ */
+export const adStatus = pgTable(
+  "ad_status",
+  {
+    id: text("id")
+      .primaryKey()
+      .$defaultFn(() => crypto.randomUUID()),
+    runId: text("run_id")
+      .notNull()
+      .references(() => run.id, { onDelete: "cascade" }),
+    adKey: text("ad_key").notNull(),
+    advertiser: text("advertiser").notNull().default(""),
+    headline: text("headline").notNull().default(""),
+    firstObservedAt: timestamp("first_observed_at"),
+    lastObservedAt: timestamp("last_observed_at"),
+    /** Comparable snapshots in a row that missed this ad. Never 3+ by accident. */
+    consecutiveAbsences: text("consecutive_absences").notNull().default("0"),
+    /** observed · not_observed_recently · likely_no_longer_active */
+    state: text("state").notNull().default("observed"),
+    /** JSON text: the snapshot ids, dates and hashes backing the state above. */
+    basis: text("basis").notNull().default("{}"),
+    /** Rank in the newest snapshot, and in the previous COMPARABLE one. */
+    latestRank: text("latest_rank"),
+    previousRank: text("previous_rank"),
+    createdAt: timestamp("created_at").notNull().defaultNow(),
+    updatedAt: timestamp("updated_at").notNull().defaultNow(),
+  },
+  (t) => [
+    index("ad_status_run_idx").on(t.runId),
+    index("ad_status_key_idx").on(t.adKey),
+  ],
+);
+
+/**
+ * The period briefing: what changed between two snapshots, in writing.
+ *
+ * Written from the computed diff, never from a hunch. It leads with coverage when
+ * the capture thinned, because a thinner capture looks EXACTLY like a quiet
+ * market and only that comparison separates them. A quiet period is allowed to
+ * say so — a briefing that cries wolf gets ignored, and then the one that
+ * mattered is missed too.
+ */
+export const periodBriefing = pgTable(
+  "period_briefing",
+  {
+    id: text("id")
+      .primaryKey()
+      .$defaultFn(() => crypto.randomUUID()),
+    runId: text("run_id")
+      .notNull()
+      .references(() => run.id, { onDelete: "cascade" }),
+    fromSnapshotId: text("from_snapshot_id").references(() => snapshot.id, {
+      onDelete: "cascade",
+    }),
+    toSnapshotId: text("to_snapshot_id")
+      .notNull()
+      .references(() => snapshot.id, { onDelete: "cascade" }),
+    comparable: boolean("comparable").notNull().default(true),
+    comparabilityNote: text("comparability_note"),
+    coverageNote: text("coverage_note").notNull().default(""),
+    headline: text("headline").notNull().default(""),
+    /** quiet · normal · active · not_comparable */
+    verdict: text("verdict").notNull().default("quiet"),
+    /** JSON text: [{what, who, interpretation, kind, signalIds, snapshotIds}] */
+    developments: text("developments").notNull().default("[]"),
+    /** JSON text: [{signal, label, note, evidence}] */
+    signals: text("signals").notNull().default("[]"),
+    /** JSON text: [{action, evidenceItemId, rationale}] — at most two. */
+    actions: text("actions").notNull().default("[]"),
+    /** JSON text: [string] — what to capture next time to close a gap. */
+    captureSuggestions: text("capture_suggestions").notNull().default("[]"),
+    limitations: text("limitations").notNull().default(""),
+    /** Digest suppressed on a quiet period, and this records that it was. */
+    digestSent: boolean("digest_sent").notNull().default(false),
+    digestSkippedReason: text("digest_skipped_reason"),
+    createdAt: timestamp("created_at").notNull().defaultNow(),
+  },
+  (t) => [index("period_briefing_run_idx").on(t.runId)],
+);
+
+/**
+ * A standing watch on a run: how often to look again, and when next.
+ *
+ * The reminder is the whole product here. It carries the saved searches and the
+ * exact filters, because a reminder that asks the user to reconstruct their own
+ * search will not be acted on. Nothing about this schedules a fetch of anything
+ * belonging to Meta — it schedules a nudge.
+ */
+export const watchTarget = pgTable(
+  "watch_target",
+  {
+    id: text("id")
+      .primaryKey()
+      .$defaultFn(() => crypto.randomUUID()),
+    runId: text("run_id")
+      .notNull()
+      .references(() => run.id, { onDelete: "cascade" })
+      .unique(),
+    userId: text("user_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    enabled: boolean("enabled").notNull().default(true),
+    /** Days between looks. 7 · 14 · 30. */
+    cadenceDays: text("cadence_days").notNull().default("14"),
+    lastSnapshotId: text("last_snapshot_id"),
+    lastLookedAt: timestamp("last_looked_at"),
+    nextReminderAt: timestamp("next_reminder_at"),
+    /** Email the briefing when a period is not quiet. */
+    emailDigest: boolean("email_digest").notNull().default(false),
+    createdAt: timestamp("created_at").notNull().defaultNow(),
+    updatedAt: timestamp("updated_at").notNull().defaultNow(),
+  },
+  (t) => [index("watch_target_user_idx").on(t.userId)],
+);
+
+
+/* ─────────────────────────────────────────────────────────────────────────────
+ * THE CLOSED LOOP (`07`)
+ *
+ * Everything above this line is inference over evidence: the public Ad Library
+ * publishes no performance figure for a commercial ad, so nothing about a
+ * competitor is ever measured. Below this line is the ONE place in the whole app
+ * where a real performance number legitimately exists — and it exists because it
+ * is about the USER'S OWN ad, on their own account, reported by them.
+ *
+ * The wall between the two halves is structural, not a convention:
+ *   · own-brand rows live in their own tables and never join the evidence batch,
+ *     so they cannot enter a percentile base and cannot skew a competitor's score
+ *   · a measured figure is `provenance: "self_reported_own_account"`, a kind that
+ *     no competitor fact can ever carry
+ *   · no ring, bar or ranking spans both halves — an opportunity score and a cost
+ *     per result are different quantities, and one axis over both would imply a
+ *     comparison the data cannot support
+ * ───────────────────────────────────────────────────────────────────────────── */
+
+/**
+ * An ad the user actually shipped — one row per creative that left the building.
+ *
+ * `variantId` is the whole point: it ties a real result back to the generated
+ * variant, and through that variant's `sourceItemId` back to the competitor angle
+ * it inherited. Without that chain the loop is not closed and the pattern library
+ * would be aggregating anonymous numbers.
+ *
+ * NOTHING here is fetched. AdMirror does not hold an ad-account token, does not
+ * publish, and does not pull insights: the user launches in their own ads manager
+ * and reports back what happened. That is a smaller claim than the brief's phase
+ * 16-17 and it is the honest one for this build.
+ */
+export const shippedAd = pgTable(
+  "shipped_ad",
+  {
+    id: text("id")
+      .primaryKey()
+      .$defaultFn(() => crypto.randomUUID()),
+    userId: text("user_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    runId: text("run_id")
+      .notNull()
+      .references(() => run.id, { onDelete: "cascade" }),
+    /** The generated cell this became. Null only for an ad shipped outside AdMirror. */
+    variantId: text("variant_id").references(() => creativeVariant.id, {
+      onDelete: "set null",
+    }),
+    /** Carried forward at ship time so the chain survives a deleted variant. */
+    sourceItemId: text("source_item_id").references(() => evidenceItem.id, {
+      onDelete: "set null",
+    }),
+    /** What the user called it in their ads manager, so they can find it again. */
+    label: text("label").notNull().default(""),
+    /** The hook mechanism and format inherited — denormalised for the pattern library. */
+    hookMechanism: text("hook_mechanism").notNull().default(""),
+    formatLabel: text("format_label").notNull().default(""),
+    assetKind: text("asset_kind").notNull().default("video"),
+    /** awareness · traffic · leads · sales — the objective it ran under. */
+    objective: text("objective").notNull().default("sales"),
+    /** Their own market label, copied so patterns can group without a join. */
+    marketLabel: text("market_label").notNull().default(""),
+    categoryLabel: text("category_label").notNull().default(""),
+    launchedOn: timestamp("launched_on"),
+    /** draft · live · finished — the user's own word for where it is. */
+    state: text("state").notNull().default("live"),
+    notes: text("notes").notNull().default(""),
+    createdAt: timestamp("created_at").notNull().defaultNow(),
+    updatedAt: timestamp("updated_at").notNull().defaultNow(),
+  },
+  (t) => [
+    index("shipped_ad_user_idx").on(t.userId),
+    index("shipped_ad_run_idx").on(t.runId),
+  ],
+);
+
+/**
+ * One reading of a shipped ad's real numbers, as the user reported them.
+ *
+ * Stored as raw counts, never as pre-computed rates: a rate with no denominator
+ * cannot be checked, cannot be re-derived when a later reading arrives, and
+ * cannot refuse itself for thin volume. `impressions` is what gates the whole
+ * diagnosis, so it is required and the reason the "not enough volume" refusal
+ * can exist at all.
+ *
+ * Every field is `self_reported_own_account`. There is no sibling provenance
+ * column here because there is only ever one possible answer — the user read it
+ * off their own dashboard.
+ */
+export const shippedResult = pgTable(
+  "shipped_result",
+  {
+    id: text("id")
+      .primaryKey()
+      .$defaultFn(() => crypto.randomUUID()),
+    shippedAdId: text("shipped_ad_id")
+      .notNull()
+      .references(() => shippedAd.id, { onDelete: "cascade" }),
+    userId: text("user_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    /** The day the user read these numbers off their own dashboard. */
+    readOn: timestamp("read_on").notNull().defaultNow(),
+    /** How long it had been running when read — the other half of "is this enough". */
+    daysLive: text("days_live").notNull().default("0"),
+    /** Raw counts, as reported. Empty string = not reported, never 0. */
+    impressions: text("impressions").notNull().default(""),
+    reach: text("reach").notNull().default(""),
+    clicks: text("clicks").notNull().default(""),
+    /** The user's own currency amount, as typed. Stored as text, never floated. */
+    amountSpent: text("amount_spent").notNull().default(""),
+    currency: text("currency").notNull().default(""),
+    results: text("results").notNull().default(""),
+    resultLabel: text("result_label").notNull().default(""),
+    /** Video funnel counts — the only way to tell a hook failure from a body failure. */
+    videoPlays: text("video_plays").notNull().default(""),
+    watched25: text("watched_25").notNull().default(""),
+    watched75: text("watched_75").notNull().default(""),
+    watched100: text("watched_100").notNull().default(""),
+    createdAt: timestamp("created_at").notNull().defaultNow(),
+  },
+  (t) => [
+    index("shipped_result_ad_idx").on(t.shippedAdId),
+    index("shipped_result_user_idx").on(t.userId),
+  ],
+);
+
+/**
+ * The user's own account baseline — what "normal" looks like for THEM.
+ *
+ * This exists because an absolute rate means nothing. A 22% hold rate is strong
+ * in one account and weak in another, so every verdict in the app is a comparison
+ * against this row and nothing else. The user types it once from their own
+ * account averages; where they haven't, the app compares against the median of
+ * their own other shipped ads, and says which of the two it used.
+ */
+export const accountBaseline = pgTable(
+  "account_baseline",
+  {
+    id: text("id")
+      .primaryKey()
+      .$defaultFn(() => crypto.randomUUID()),
+    userId: text("user_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" })
+      .unique(),
+    /** Percentages as typed, e.g. "1.4" for 1.4%. Empty = not provided. */
+    clickThroughPct: text("click_through_pct").notNull().default(""),
+    thumbstopPct: text("thumbstop_pct").notNull().default(""),
+    holdPct: text("hold_pct").notNull().default(""),
+    costPerResult: text("cost_per_result").notNull().default(""),
+    currency: text("currency").notNull().default(""),
+    /** What window these averages came from, in the user's words. */
+    basisNote: text("basis_note").notNull().default(""),
+    updatedAt: timestamp("updated_at").notNull().defaultNow(),
+  },
+);
+
+/**
+ * The user's own ad, put on the board as a "You" row (phase 0, SELF_BASELINE).
+ *
+ * Deliberately a SEPARATE table from `evidenceItem`. Putting an own-brand flag on
+ * the evidence table would mean every percentile base, every coverage count and
+ * every ranking query needed a `where isOwnBrand = false` that someone would
+ * eventually forget. A different table cannot be forgotten.
+ */
+export const ownAd = pgTable(
+  "own_ad",
+  {
+    id: text("id")
+      .primaryKey()
+      .$defaultFn(() => crypto.randomUUID()),
+    userId: text("user_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    runId: text("run_id")
+      .notNull()
+      .references(() => run.id, { onDelete: "cascade" }),
+    label: text("label").notNull().default(""),
+    headline: text("headline").notNull().default(""),
+    bodyCopy: text("body_copy").notNull().default(""),
+    ctaLabel: text("cta_label").notNull().default(""),
+    /** Their own words, which is better evidence of their voice than a homepage. */
+    voiceNote: text("voice_note").notNull().default(""),
+    assetKind: text("asset_kind").notNull().default("video"),
+    /** The measured numbers for this one, same shape as a reported reading. */
+    impressions: text("impressions").notNull().default(""),
+    clicks: text("clicks").notNull().default(""),
+    amountSpent: text("amount_spent").notNull().default(""),
+    currency: text("currency").notNull().default(""),
+    results: text("results").notNull().default(""),
+    resultLabel: text("result_label").notNull().default(""),
+    videoPlays: text("video_plays").notNull().default(""),
+    watched25: text("watched_25").notNull().default(""),
+    watched75: text("watched_75").notNull().default(""),
+    daysLive: text("days_live").notNull().default(""),
+    createdAt: timestamp("created_at").notNull().defaultNow(),
+  },
+  (t) => [index("own_ad_run_idx").on(t.runId)],
+);
+
+/**
+ * The cross-run pattern library (phase 18b).
+ *
+ * One row per hook mechanism × format × category × market, holding COUNTS, not
+ * conclusions. `n` travels with every cell and the UI greys out anything under
+ * five, because a seductive number built on three data points is worse than an
+ * empty cell — it would be believed.
+ *
+ * Rows are recomputed from `shippedResult` rather than incremented, so a
+ * corrected reading fixes the pattern instead of leaving a ghost behind.
+ */
+export const hookPattern = pgTable(
+  "hook_pattern",
+  {
+    id: text("id")
+      .primaryKey()
+      .$defaultFn(() => crypto.randomUUID()),
+    userId: text("user_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    mechanism: text("mechanism").notNull(),
+    formatLabel: text("format_label").notNull().default(""),
+    categoryLabel: text("category_label").notNull().default(""),
+    marketLabel: text("market_label").notNull().default(""),
+    /** How many shipped ads carried this mechanism, and how many had a reading. */
+    shippedCount: text("shipped_count").notNull().default("0"),
+    measuredCount: text("measured_count").notNull().default("0"),
+    /** Median index vs the user's own baseline, ×100. Empty when n is too thin. */
+    thumbstopIndex: text("thumbstop_index").notNull().default(""),
+    holdIndex: text("hold_index").notNull().default(""),
+    clickIndex: text("click_index").notNull().default(""),
+    costIndex: text("cost_index").notNull().default(""),
+    /** outperformed · inline · underperformed · too_thin */
+    standing: text("standing").notNull().default("too_thin"),
+    updatedAt: timestamp("updated_at").notNull().defaultNow(),
+  },
+  (t) => [
+    index("hook_pattern_user_idx").on(t.userId),
+    uniqueIndex("hook_pattern_cell_idx").on(
+      t.userId,
+      t.mechanism,
+      t.formatLabel,
+      t.categoryLabel,
+      t.marketLabel,
+    ),
+  ],
+);
+
+/**
+ * A proposed re-fit of the opportunity score's weights (phase 18a).
+ *
+ * PROPOSE, NEVER AUTO-APPLY. The whole point of this table is that a proposal
+ * SITS here until a human accepts it. Auto-tuning a ranking model on a few dozen
+ * noisy samples is how you build a system that confidently ranks garbage — and
+ * because the score decides which angles a user generates from, a bad re-fit
+ * would quietly corrupt every run afterwards with nothing on screen to show it.
+ *
+ * `state` is the gate: `proposed` is inert, `accepted` becomes the live weights,
+ * `declined` is kept as history so the same weak proposal isn't re-offered as if
+ * it were new. Only one row per user is ever `accepted`.
+ *
+ * The evidence for a proposal is stored WITH it — sample size, the fit quality,
+ * the old weights and the new. A weight vector with no visible provenance is
+ * exactly the kind of unexplained number this product refuses everywhere else.
+ */
+export const weightProposal = pgTable(
+  "weight_proposal",
+  {
+    id: text("id")
+      .primaryKey()
+      .$defaultFn(() => crypto.randomUUID()),
+    userId: text("user_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    /** proposed · accepted · declined */
+    state: text("state").notNull().default("proposed"),
+    /** JSON text: the weight vector in force before this proposal. */
+    fromWeights: text("from_weights").notNull().default("{}"),
+    /** JSON text: the proposed vector. Always renormalised to sum to 1. */
+    toWeights: text("to_weights").notNull().default("{}"),
+    /** How many measured ads the fit saw, and over how many days. */
+    sampleSize: text("sample_size").notNull().default("0"),
+    /** weak · moderate · strong — never a bare correlation number on its own. */
+    fitQuality: text("fit_quality").notNull().default("weak"),
+    /** JSON text: per-component correlation, direction and n. The arithmetic. */
+    evidence: text("evidence").notNull().default("{}"),
+    /** Plain-words summary of what the fit found and what it does NOT prove. */
+    summary: text("summary").notNull().default(""),
+    decidedAt: timestamp("decided_at"),
+    createdAt: timestamp("created_at").notNull().defaultNow(),
+  },
+  (t) => [index("weight_proposal_user_idx").on(t.userId)],
+);

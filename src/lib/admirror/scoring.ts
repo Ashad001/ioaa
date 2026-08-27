@@ -30,6 +30,17 @@ export const EBOS_WEIGHTS = {
 
 export type EbosComponent = keyof typeof EBOS_WEIGHTS;
 
+/**
+ * A complete weight vector. Always all five components, always summing to 1.
+ *
+ * The default above is a human's judgement. Once a user has enough of their own
+ * measured results, the re-fit can propose a vector fitted to them — but only a
+ * vector the user has explicitly accepted is ever passed in here, and the vector
+ * actually used is written into every score's stored inputs, so the teardown
+ * drawer shows the arithmetic that really ran rather than the default's.
+ */
+export type EbosWeights = Record<EbosComponent, number>;
+
 export type EbosResult = {
   ebos: number;
   components: Partial<Record<EbosComponent, number>>;
@@ -81,6 +92,7 @@ export function computeEbos(
   item: ScoreItem,
   refs: ReturnType<typeof batchReferences>,
   now: Date,
+  weights: Partial<EbosWeights> = EBOS_WEIGHTS,
 ): EbosResult {
   const components: Partial<Record<EbosComponent, number>> = {};
   const dropped: EbosComponent[] = [];
@@ -124,7 +136,14 @@ export function computeEbos(
   for (const key of Object.keys(EBOS_WEIGHTS) as EbosComponent[]) {
     const value = components[key];
     if (value === undefined) continue;
-    const weight = EBOS_WEIGHTS[key];
+    // The accepted vector is the source of truth when there is one, but a
+    // missing or non-finite entry falls back to the shipped default rather than
+    // silently weighting that component at zero.
+    const candidate = weights[key];
+    const weight =
+      typeof candidate === "number" && Number.isFinite(candidate) && candidate >= 0
+        ? candidate
+        : EBOS_WEIGHTS[key];
     weightsUsed[key] = weight;
     weighted += weight * value;
     weightSum += weight;

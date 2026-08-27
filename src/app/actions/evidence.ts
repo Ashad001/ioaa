@@ -21,10 +21,12 @@ import {
   runStep,
   searchReference,
 } from "@/db/schema";
+import { getActiveWeights } from "@/lib/admirror/queries";
 import { requireUser } from "@/lib/auth";
 import { describeDataError } from "@/lib/errors";
 import { createUploadUrl, ALLOWED_UPLOAD_TYPES } from "@/lib/storage";
 import { conceptKeyFor, deriveTeardown } from "@/lib/admirror/pipeline";
+import { recordSnapshot } from "@/lib/admirror/watch-record";
 import {
   batchReferences,
   computeCoverage,
@@ -377,11 +379,14 @@ export async function closeBatch(input: { runId: string; batchId: string }): Pro
     const coverage = computeCoverage(scoreItems, planned.map((c) => c.name));
     const now = new Date();
     const refs = batchReferences(scoreItems, now);
+    // The weighting the user has accepted, or the human-chosen default. A merely
+    // proposed vector is ignored here by design — that is the whole guarantee.
+    const weights = await getActiveWeights(user.id);
 
     await db.delete(adScore).where(eq(adScore.batchId, input.batchId));
 
     for (const scoreItem of scoreItems) {
-      const result = computeEbos(scoreItem, refs, now);
+      const result = computeEbos(scoreItem, refs, now, weights);
       await db.insert(adScore).values({
         evidenceItemId: scoreItem.id,
         runId: input.runId,
@@ -423,8 +428,14 @@ export async function closeBatch(input: { runId: string; batchId: string }): Pro
       .set({ status: "AWAITING_GATE", stepCursor: "8", updatedAt: new Date() })
       .where(eq(run.id, input.runId));
 
+    // File this capture into the watchtower: a dated snapshot, one observation
+    // per ad, and each ad's standing status. Without it the history has a hole,
+    // and a hole in the history reads on screen exactly like a quiet market.
+    await recordSnapshot({ runId: input.runId, batchId: input.batchId });
+
     revalidatePath(`/runs/${input.runId}`);
     revalidatePath(`/runs/${input.runId}/board`);
+    revalidatePath(`/runs/${input.runId}/watch`);
     return { ok: true };
   } catch (error) {
     return fail(error);
