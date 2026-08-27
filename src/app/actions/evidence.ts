@@ -3,10 +3,10 @@
 /**
  * Evidence intake (step 5), normalise (6), rank (7) and teardown (8).
  *
- * Nothing in here requests an Ad Library URL. A pasted URL is stored as a
- * reference and rendered as a link; the fields around it are filled by the person
- * who actually looked at the ad. Fields nobody filled stay `unknown` — never a
- * zero, never a guess.
+ * This is the MANUAL path, and it stays first-class. Automatic collection lives
+ * in `autopilot.ts`; it is best-effort, so a blocked search or a small market
+ * leaves real gaps and the only honest answer to a gap is a good way to fill it
+ * by hand. Fields nobody filled stay `unknown` — never a zero, never a guess.
  */
 import { and, asc, eq, inArray } from "drizzle-orm";
 import { revalidatePath } from "next/cache";

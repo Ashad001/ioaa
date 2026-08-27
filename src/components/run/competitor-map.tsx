@@ -1,18 +1,24 @@
 "use client";
 
 /**
- * S2 — the competitor map.
+ * S2 — the competitor map, now DISCOVERED rather than derived.
  *
- * Every row here started as a slot derived from the brief, not a verified fact,
- * so the user renames and prunes before the search plan is built. Doing that
- * editing BEFORE the plan is what makes the searches worth opening.
+ * Every row here came back from a real sweep of the public Ad Library: the
+ * advertiser was seen running ads in this country under a word the brand's own
+ * site uses. That makes the "why" a piece of evidence rather than a rationale,
+ * and the confidence bar a measure of how broadly they own the category words.
+ *
+ * Editing stays, and stays first-class. A discovered advertiser can still be the
+ * wrong read of a market, and a user who cannot correct the map has to accept a
+ * board built on it.
  */
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
-import { Plus, RotateCcw, Trash2 } from "lucide-react";
+import { Plus, RefreshCw, RotateCcw, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 
-import { addCompetitor, buildDiscoveryPlan, renameCompetitor, toggleCompetitor } from "@/app/actions/runs";
+import { addCompetitor, renameCompetitor, toggleCompetitor } from "@/app/actions/runs";
+import { autoCollect } from "@/app/actions/autopilot";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Plate } from "@/components/rack/plate";
@@ -28,11 +34,11 @@ const TIER_LABEL: Record<string, string> = {
 export function CompetitorMap({
   runId,
   competitors,
-  planBuilt,
+  hasEvidence,
 }: {
   runId: string;
   competitors: CompetitorRow[];
-  planBuilt: boolean;
+  hasEvidence: boolean;
 }) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
@@ -53,13 +59,22 @@ export function CompetitorMap({
 
   const tiers: ("DIRECT" | "ADJACENT" | "ATTENTION")[] = ["DIRECT", "ADJACENT", "ATTENTION"];
 
+  if (competitors.length === 0) {
+    return (
+      <p className="max-w-[68ch] text-[13.5px] leading-relaxed text-muted-foreground">
+        Nobody has been found yet. As soon as the Ad Library searches come back, whoever is actually
+        running ads in your market appears here — with the category word that found them.
+      </p>
+    );
+  }
+
   return (
     <div className="space-y-6">
       <div className="max-w-[68ch]">
         <p className="text-[13.5px] leading-relaxed text-muted-foreground">
-          These are slots, not verified companies — AdMirror derived them from your brief. Put the real
-          names in, drop what doesn&rsquo;t apply, then build the searches. The plan is only as good as
-          these names.
+          Everyone here was found running live ads in your market — not guessed from your category.
+          The note under each name is the search that found them. Drop anyone who isn&rsquo;t really a
+          competitor and add anyone we missed.
         </p>
       </div>
 
@@ -81,11 +96,13 @@ export function CompetitorMap({
                   <div className="flex min-w-0 items-center gap-2">
                     <Input
                       value={drafts[row.id] ?? row.name}
-                      onChange={(e) => setDrafts((d) => ({ ...d, [row.id]: e.target.value }))}
+                      onChange={(event) =>
+                        setDrafts((current) => ({ ...current, [row.id]: event.target.value }))
+                      }
                       onBlur={() => commitName(row)}
-                      onKeyDown={(e) => {
-                        if (e.key === "Enter") {
-                          e.preventDefault();
+                      onKeyDown={(event) => {
+                        if (event.key === "Enter") {
+                          event.preventDefault();
                           commitName(row);
                         }
                       }}
@@ -120,7 +137,7 @@ export function CompetitorMap({
                     {row.whyUseful}
                   </p>
                   <div className="mt-2.5 flex min-w-0 items-center gap-2 px-1.5">
-                    <span className="plate shrink-0 text-rack-engrave">Confidence</span>
+                    <span className="plate shrink-0 text-rack-engrave">Evidence</span>
                     <div className="h-1 min-w-0 flex-1 overflow-hidden rounded-full bg-rack-rail">
                       <div
                         className="h-full bg-rack-engrave"
@@ -140,11 +157,11 @@ export function CompetitorMap({
 
       <div className="flex flex-wrap items-end gap-2 border-t border-border pt-5">
         <div className="min-w-0 flex-1 space-y-1.5 sm:max-w-72">
-          <Plate as="div">Add a competitor</Plate>
+          <Plate as="div">Add someone we missed</Plate>
           <div className="flex min-w-0 gap-2">
             <Input
               value={newName}
-              onChange={(e) => setNewName(e.target.value)}
+              onChange={(event) => setNewName(event.target.value)}
               placeholder="Company name"
               className="min-w-0"
             />
@@ -165,31 +182,35 @@ export function CompetitorMap({
               Add
             </Button>
           </div>
+          <p className="text-[11.5px] leading-relaxed text-muted-foreground">
+            Added by hand? Sweep again to pull their ads in too.
+          </p>
         </div>
       </div>
 
-      <div className="flex flex-wrap items-center gap-3 border-t border-border pt-5">
-        <Button
-          size="lg"
-          disabled={pending || kept.length === 0}
-          onClick={() =>
-            startTransition(async () => {
-              const result = await buildDiscoveryPlan(runId);
-              if (!result.ok) {
-                toast.error(result.error);
-                return;
-              }
-              router.push(`/runs/${runId}/collect`);
-            })
-          }
-        >
-          {pending ? "Building the searches…" : planBuilt ? "Rebuild the searches" : "Build the searches"}
-        </Button>
-        <p className="min-w-0 text-xs text-muted-foreground">
-          {kept.length} competitor{kept.length === 1 ? "" : "s"} kept. AdMirror builds the links; you open
-          them.
-        </p>
-      </div>
+      {hasEvidence ? (
+        <div className="flex flex-wrap items-center gap-3 border-t border-border pt-5">
+          <Button
+            variant="outline"
+            disabled={pending || kept.length === 0}
+            onClick={() =>
+              startTransition(async () => {
+                const result = await autoCollect(runId);
+                if (!result.ok) toast.error(result.error);
+                else toast.success("Swept the updated list — the board is refreshed.");
+                router.refresh();
+              })
+            }
+          >
+            <RefreshCw size={14} strokeWidth={1.7} />
+            {pending ? "Sweeping…" : "Sweep this list again"}
+          </Button>
+          <p className="min-w-0 text-xs text-muted-foreground">
+            {kept.length} advertiser{kept.length === 1 ? "" : "s"} kept. Only ads not already on your
+            board get added.
+          </p>
+        </div>
+      ) : null}
     </div>
   );
 }

@@ -108,7 +108,7 @@ export function SourceModeNotice({
       <Lamp state="hold" className="mt-1.5" />
       <div className="min-w-0">
         <p className="text-[13px] leading-relaxed text-foreground">
-          This reflects the ads <span className="font-medium">you submitted</span>, not a complete Meta
+          This reflects the ads <span className="font-medium">that were collected</span>, not a complete Meta
           inventory.
         </p>
         {detail ? (

@@ -200,7 +200,7 @@ export function computeCoverage(
 
   const gaps: string[] = [];
   if (count < EXPECTED_MIN_ITEMS) {
-    gaps.push(`Submit ${EXPECTED_MIN_ITEMS - count} more ads to reach a useful volume.`);
+    gaps.push(`${EXPECTED_MIN_ITEMS - count} more ads would reach a useful volume — sweep again or add some.`);
   }
   const missingCompetitors = plannedCompetitors.filter((name) => {
     const clean = name.trim().toLowerCase();
@@ -208,13 +208,13 @@ export function computeCoverage(
     return ![...represented].some((seen) => seen.includes(clean) || clean.includes(seen));
   });
   for (const name of missingCompetitors.slice(0, 3)) {
-    gaps.push(`No evidence yet for ${name}.`);
+    gaps.push(`Nothing collected yet for ${name}.`);
   }
   if (count > 0 && withStart < count) {
     gaps.push(`${count - withStart} of ${count} items have no visible start date.`);
   }
   if (count > 0 && withCreative < count) {
-    gaps.push(`${count - withCreative} of ${count} items are text-only — a screenshot adds a lot.`);
+    gaps.push(`${count - withCreative} of ${count} have no image — attaching a screenshot adds a lot.`);
   }
 
   return { score, band, parts, gaps };
@@ -227,4 +227,4 @@ export const BAND_COPY: Record<CoverageResult["band"], string> = {
 };
 
 /** Never "the market's best ads". This is the only allowed superlative. */
-export const RANK_CAPTION = "Highest opportunity score in this submitted evidence set";
+export const RANK_CAPTION = "Highest opportunity score in this collected evidence set";

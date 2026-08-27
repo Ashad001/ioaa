@@ -10,6 +10,7 @@
 
 export const PROVENANCE_KINDS = [
   "observed_in_user_evidence",
+  "swept_from_public_library",
   "user_asserted",
   "derived_from_evidence",
   "model_interpretation",
@@ -37,6 +38,12 @@ export const PROVENANCE_META: Record<
     short: "OBS",
     label: "Observed in your evidence",
     explain: "Your submitted artefact shows this.",
+  },
+  swept_from_public_library: {
+    short: "LIB",
+    label: "Read from the public Ad Library",
+    explain:
+      "AdMirror opened the public Ad Library search itself and read this off the page on the date shown. Nobody typed it — and no performance figure exists in it, because Meta does not publish one.",
   },
   user_asserted: {
     short: "YOU",

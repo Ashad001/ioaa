@@ -241,9 +241,8 @@ export async function addCompetitor(input: { runId: string; name: string }): Pro
 }
 
 /**
- * Step 4 — the discovery plan. Builds one search reference per competitor ×
- * country × language. These URLs are DISPLAYED and OPENED BY THE USER. Nothing
- * here fetches them.
+ * Step 4 — the manual discovery plan, kept for a run the user drives themselves.
+ * The automatic path builds its own plan and then sweeps it; see `autopilot.ts`.
  */
 export async function buildDiscoveryPlan(runId: string): Promise<ActionResult> {
   try {
@@ -332,8 +331,8 @@ export async function buildDiscoveryPlan(runId: string): Promise<ActionResult> {
 }
 
 /**
- * Save a search URL the user pasted. We parse the filters to show them back, and
- * store the link so they can reopen it. We never visit it.
+ * Save a search URL the user pasted. We parse the filters to show them back and
+ * store the link, so the next sweep can read this search too.
  */
 export async function savePastedSearch(input: {
   runId: string;

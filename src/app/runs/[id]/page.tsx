@@ -3,6 +3,7 @@ import { notFound, redirect } from "next/navigation";
 import { ExternalLink } from "lucide-react";
 
 import { ensureResearch } from "@/lib/admirror/ensure";
+import { AutopilotRunner } from "@/components/run/autopilot-runner";
 import { CompetitorMap } from "@/components/run/competitor-map";
 import { RunNav } from "@/components/run/run-nav";
 import { Lamp, Panel, Plate, Readout } from "@/components/rack/plate";
@@ -10,7 +11,15 @@ import { PaneHeader, RackShell } from "@/components/rack/shell";
 import { Button } from "@/components/ui/button";
 import { getUser } from "@/lib/auth";
 import type { Dossier } from "@/lib/admirror/pipeline";
-import { getCompetitors, getRun, getSearches, getSteps } from "@/lib/admirror/queries";
+import { getCompetitors, getItems, getRun, getSteps } from "@/lib/admirror/queries";
+
+type SiteRead = {
+  title?: string;
+  description?: string;
+  categoryTerms?: string[];
+  note?: string;
+  reachable?: boolean;
+};
 
 export default async function RunConsolePage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -20,22 +29,31 @@ export default async function RunConsolePage({ params }: { params: Promise<{ id:
   const current = await getRun(id, user.id);
   if (!current) notFound();
 
-  // Steps 2–3 run unattended on first open — the console doing its job, not a
-  // button the user has to find. This is a plain function, not a server action:
-  // an action revalidates, and Next refuses that during render.
+  // A brand read good enough to render immediately, so the console is never
+  // blank while the sweep runs. The sweep itself is kicked off by the runner
+  // below — it takes seconds and must not happen inside a render.
   await ensureResearch(current);
 
-  const [fresh, steps, competitors, searches] = await Promise.all([
+  const [fresh, steps, competitors, items] = await Promise.all([
     getRun(id, user.id),
     getSteps(id),
     getCompetitors(id),
-    getSearches(id),
+    getItems(id),
   ]);
   if (!fresh) notFound();
 
-  const dossier: Dossier | null = fresh.dossier ? (JSON.parse(fresh.dossier) as Dossier) : null;
+  let dossier: (Dossier & { siteRead?: SiteRead; marketNote?: string }) | null = null;
+  try {
+    dossier = fresh.dossier ? JSON.parse(fresh.dossier) : null;
+  } catch {
+    dossier = null;
+  }
+
   const objectives = fresh.objectives.split(",").filter(Boolean);
-  const planBuilt = searches.some((row) => row.origin === "plan");
+  const hasEvidence = items.length > 0;
+  const awaitingGate = fresh.status === "AWAITING_GATE";
+  const siteRead = dossier?.siteRead;
+  const terms = siteRead?.categoryTerms ?? [];
 
   return (
     <RackShell
@@ -46,17 +64,19 @@ export default async function RunConsolePage({ params }: { params: Promise<{ id:
       }
       nav={<RunNav runId={id} steps={steps} activeStep="COMPETITOR_MAP" />}
       actions={
-        planBuilt ? (
-          <Button size="sm" render={<Link href={`/runs/${id}/collect`} />}><span className="min-w-0 truncate">Go and capture</span></Button>
+        hasEvidence ? (
+          <Button size="sm" render={<Link href={`/runs/${id}/board`} />}>
+            <span className="min-w-0 truncate">See the board</span>
+          </Button>
         ) : null
       }
     >
       <PaneHeader
         title="Research console"
-        hint="Steps 1–4 run without you. Step 5 is yours."
+        hint="Collection runs on its own. You step in once, at the gate."
         actions={
           <span className="plate flex items-center gap-2 text-rack-engrave">
-            <Lamp state={planBuilt ? "done" : "hold"} pulsing={!planBuilt} />
+            <Lamp state={hasEvidence ? "done" : "hold"} pulsing={!hasEvidence} />
             {fresh.status.replace(/_/g, " ").toLowerCase()}
           </span>
         }
@@ -66,12 +86,58 @@ export default async function RunConsolePage({ params }: { params: Promise<{ id:
         <div className="mx-auto w-full max-w-[1100px] px-4 py-6 sm:px-6">
           <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_300px]">
             <div className="min-w-0 space-y-4">
-              {dossier ? (
-                <Panel label="Brand read" aside={<span className="plate text-rack-engrave">step 02</span>}>
+              <Panel
+                label="Collecting"
+                aside={<span className="plate text-rack-engrave">steps 03–08</span>}
+              >
+                <div className="px-4 py-4">
+                  <AutopilotRunner
+                    runId={id}
+                    hasCompetitors={competitors.length > 0}
+                    hasEvidence={hasEvidence}
+                    awaitingGate={awaitingGate}
+                  />
+                </div>
+              </Panel>
+
+              {dossier?.positioning ? (
+                <Panel
+                  label="Brand read"
+                  aside={<span className="plate text-rack-engrave">step 02</span>}
+                >
                   <div className="space-y-4 px-4 py-4">
                     <p className="max-w-[65ch] text-[13.5px] leading-relaxed text-foreground/90">
                       {dossier.positioning}
                     </p>
+
+                    {siteRead?.description ? (
+                      <div className="min-w-0">
+                        <Plate className="block">What your site says</Plate>
+                        <p className="mt-1.5 max-w-[65ch] text-[13px] leading-relaxed text-foreground/85">
+                          {siteRead.description}
+                        </p>
+                      </div>
+                    ) : null}
+
+                    {terms.length > 0 ? (
+                      <div>
+                        <Plate className="block">Searched under</Plate>
+                        <div className="mt-2 flex flex-wrap gap-1.5">
+                          {terms.map((term) => (
+                            <span
+                              key={term}
+                              className="rounded-full border border-chart-1/40 bg-chart-1/[0.08] px-2.5 py-1 text-[12px] text-foreground/85"
+                            >
+                              {term}
+                            </span>
+                          ))}
+                        </div>
+                        <p className="mt-2 text-[11.5px] leading-relaxed text-muted-foreground">
+                          These are your site&rsquo;s own words — they&rsquo;re what found the
+                          advertisers below.
+                        </p>
+                      </div>
+                    ) : null}
 
                     <div>
                       <Plate className="block">Who it&rsquo;s for</Plate>
@@ -98,8 +164,14 @@ export default async function RunConsolePage({ params }: { params: Promise<{ id:
                         <Plate className="block">Proof this market wants</Plate>
                         <ul className="mt-1.5 space-y-1">
                           {dossier.proofShape.map((proof) => (
-                            <li key={proof} className="flex gap-2 text-[13px] leading-relaxed text-foreground/85">
-                              <span aria-hidden className="mt-2 size-1 shrink-0 rounded-full bg-rack-seam" />
+                            <li
+                              key={proof}
+                              className="flex gap-2 text-[13px] leading-relaxed text-foreground/85"
+                            >
+                              <span
+                                aria-hidden
+                                className="mt-2 size-1 shrink-0 rounded-full bg-rack-seam"
+                              />
                               <span className="min-w-0">{proof}</span>
                             </li>
                           ))}
@@ -108,18 +180,18 @@ export default async function RunConsolePage({ params }: { params: Promise<{ id:
                     </div>
 
                     <p className="border-t border-border/70 pt-3 text-[12px] leading-relaxed text-muted-foreground">
-                      Read confidence: {dossier.confidence}. {dossier.basis}
+                      {siteRead?.note ?? dossier.basis}
                     </p>
                   </div>
                 </Panel>
               ) : null}
 
               <Panel
-                label="Competitor map"
+                label="Who's advertising against you"
                 aside={<span className="plate text-rack-engrave">step 03</span>}
               >
                 <div className="px-4 py-4">
-                  <CompetitorMap runId={id} competitors={competitors} planBuilt={planBuilt} />
+                  <CompetitorMap runId={id} competitors={competitors} hasEvidence={hasEvidence} />
                 </div>
               </Panel>
             </div>
@@ -138,7 +210,7 @@ export default async function RunConsolePage({ params }: { params: Promise<{ id:
                     value={objectives[0] ?? "Direct response"}
                     hint={objectives.slice(1).join(" · ") || undefined}
                   />
-                  <Readout label="Lookback" value={`${fresh.lookbackDays} days`} />
+                  <Readout label="Ads collected" value={String(items.length)} />
                   {fresh.brandWebsite ? (
                     <div className="min-w-0">
                       <Plate className="block">Website</Plate>
@@ -153,18 +225,28 @@ export default async function RunConsolePage({ params }: { params: Promise<{ id:
                       </a>
                     </div>
                   ) : null}
+                  {dossier?.marketNote ? (
+                    <p className="text-[11.5px] leading-relaxed text-muted-foreground">
+                      {dossier.marketNote}
+                    </p>
+                  ) : null}
                 </div>
               </Panel>
 
-              <Panel label="Source mode">
+              <Panel label="Where this comes from">
                 <div className="px-4 py-4">
                   <p className="text-[12.5px] leading-relaxed text-foreground/85">
-                    Browser Evidence Mode. AdMirror builds the Ad Library searches and stores the filters
-                    — you open them and submit what you find.
+                    AdMirror reads the public Meta Ad Library itself — the same pages anyone can open
+                    without an account. It takes the ad copy, the call to action and the date each ad
+                    started running.
                   </p>
                   <p className="mt-2.5 text-[12px] leading-relaxed text-muted-foreground">
-                    It never visits a Library link, never downloads competitor media, and never invents a
-                    figure Meta doesn&rsquo;t publish.
+                    Meta publishes no spend, reach or click figures for these ads, so AdMirror shows
+                    none. Every fact on your board carries a badge saying whether we read it or you
+                    did.
+                  </p>
+                  <p className="mt-2.5 text-[12px] leading-relaxed text-muted-foreground">
+                    Anything a search couldn&rsquo;t return is listed as a gap, never filled in.
                   </p>
                 </div>
               </Panel>

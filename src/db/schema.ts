@@ -203,8 +203,9 @@ export const competitor = pgTable(
 );
 
 /**
- * A saved public Ad Library search. AdMirror stores the link and the filters and
- * gives the user a button to open it themselves. It is NEVER fetched.
+ * A saved public Ad Library search — the record of WHERE ads on the board came
+ * from. AdMirror runs these searches itself against the PUBLIC Library page, and
+ * the user can open the same link to check our reading against the real thing.
  */
 export const searchReference = pgTable(
   "search_reference",

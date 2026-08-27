@@ -70,7 +70,7 @@ export default async function BoardPage({ params }: { params: Promise<{ id: stri
       }
       nav={<RunNav runId={id} steps={steps} activeStep="HUMAN_GATE" />}
       actions={
-        <Button variant="ghost" size="sm" render={<Link href={`/runs/${id}/collect`} />}><span className="min-w-0 truncate">Capture more</span></Button>
+        <Button variant="ghost" size="sm" render={<Link href={`/runs/${id}/collect`} />}><span className="min-w-0 truncate">Collected ads</span></Button>
       }
     >
       <PaneHeader
@@ -78,14 +78,14 @@ export default async function BoardPage({ params }: { params: Promise<{ id: stri
         hint="Grouped by angle, so one advertiser's repeats don't own the board."
         actions={
           closed.length > 1 ? (
-            <Button variant="secondary" size="sm" render={<Link href={`/runs/${id}/timeline`} />}><span className="min-w-0 truncate">Compare captures</span></Button>
+            <Button variant="secondary" size="sm" render={<Link href={`/runs/${id}/timeline`} />}><span className="min-w-0 truncate">Compare sweeps</span></Button>
           ) : null
         }
       />
       <SourceModeNotice
         detail={
           latest
-            ? `${latest.label} · ${items.length} ads · captured ${capturedOn} · coverage ${coverage.band} (${coverage.score.toFixed(2)})`
+            ? `${latest.label} · ${items.length} ads · collected ${capturedOn} · coverage ${coverage.band} (${coverage.score.toFixed(2)})`
             : undefined
         }
       />

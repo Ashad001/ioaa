@@ -38,12 +38,12 @@ export type StepDef = {
 };
 
 export const STEPS: StepDef[] = [
-  { n: 1, name: "INTAKE", title: "Brief", detail: "Brand, market and objective recorded", actor: "auto" },
+  { n: 1, name: "INTAKE", title: "Your site", detail: "Read for what you sell and where", actor: "you" },
   { n: 2, name: "BRAND_RESEARCH", title: "Brand read", detail: "Positioning, audience and voice", actor: "auto" },
-  { n: 3, name: "COMPETITOR_MAP", title: "Competitor map", detail: "Who you're up against in this market", actor: "auto" },
-  { n: 4, name: "DISCOVERY_PLAN", title: "Search plan", detail: "Ad Library searches, ready to open", actor: "auto" },
-  { n: 5, name: "EVIDENCE_INTAKE", title: "Capture", detail: "You open the searches and submit what you find", actor: "you" },
-  { n: 6, name: "EVIDENCE_NORMALIZE", title: "Normalise", detail: "Deduplicate and tidy what you submitted", actor: "auto" },
+  { n: 3, name: "COMPETITOR_MAP", title: "Who's advertising", detail: "Found by searching your category", actor: "auto" },
+  { n: 4, name: "DISCOVERY_PLAN", title: "Search plan", detail: "One Ad Library search per advertiser", actor: "auto" },
+  { n: 5, name: "EVIDENCE_INTAKE", title: "Collect", detail: "Live ads read from the public Library", actor: "auto" },
+  { n: 6, name: "EVIDENCE_NORMALIZE", title: "Normalise", detail: "Deduplicate and tidy the collection", actor: "auto" },
   { n: 7, name: "EVIDENCE_RANK", title: "Rank", detail: "Opportunity score and coverage", actor: "auto" },
   { n: 8, name: "TEARDOWN", title: "Teardown", detail: "How each ad is built", actor: "auto" },
   { n: 9, name: "HUMAN_GATE", title: "Your call", detail: "Pick the angles and press the button", actor: "you" },

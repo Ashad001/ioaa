@@ -63,7 +63,7 @@ export default async function TimelinePage({
     >
       <PaneHeader
         title="Compare captures"
-        hint="What changed between two batches you submitted — no more, no less."
+        hint="What changed between two collections — no more, no less."
       />
       <SourceModeNotice detail={THREE_SNAPSHOT_RULE} />
 

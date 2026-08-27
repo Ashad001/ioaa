@@ -15,6 +15,7 @@ import { cn } from "@/lib/utils";
 
 const BADGE_STYLE: Record<ProvenanceKind, string> = {
   observed_in_user_evidence: "bg-lamp-live/18 text-lamp-live border border-lamp-live/45",
+  swept_from_public_library: "bg-chart-1/16 text-chart-1 border border-chart-1/45",
   user_asserted: "bg-transparent text-primary border border-primary/60",
   derived_from_evidence: "bg-transparent text-chart-2 border border-chart-2/55",
   model_interpretation: "bg-transparent text-muted-foreground border border-dashed border-rack-seam",

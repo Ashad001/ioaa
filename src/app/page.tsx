@@ -19,8 +19,9 @@ export default async function HomePage() {
               Their best angle, your ad.
             </h1>
             <p className="mt-3 text-[14.5px] leading-relaxed text-muted-foreground">
-              Capture competitor ads from the public Meta Ad Library, rank them honestly against what you
-              actually captured, and turn the angle you pick into three original variants and a test plan.
+              Give us your website. AdMirror finds who&rsquo;s advertising against you, collects their live
+              ads from the public Meta Ad Library, ranks them honestly, and turns the angle you pick into
+              three original variants and a test plan.
             </p>
           </div>
           <SignInPanel />

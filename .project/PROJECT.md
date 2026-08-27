@@ -1,7 +1,7 @@
 <!-- OWNER: Build (with the user) · READERS: every agent · READ THIS FIRST -->
 # AdMirror
 
-**One-liner:** A competitive-creative engine for paid social: capture competitor ads from the public Meta Ad Library yourself, rank them honestly against what you actually captured, then turn the angle you pick into three original ad variants and a test plan.
+**One-liner:** A competitive-creative engine for paid social: give it your website, it finds who advertises against you and collects their live ads from the public Meta Ad Library itself, ranks them honestly against what it actually collected, then turns the angle you pick into three original ad variants and a test plan.
 
 ## Goal
 Give a marketer the winning ANGLE from their market's ads — the hook mechanism, the objection, the beat order — rewritten as their own ad, without ever inventing a performance figure Meta does not publish.
@@ -15,10 +15,14 @@ Founders, in-house marketers and freelancers running paid social themselves, in 
 - Repo: —
 
 ## What exists today
-- **Intake** — brand, website, market (8 presets + custom builder), objective chips, advanced media/lookback. States up front that capture is the user's job.
-- **Research console** — 15-step pipeline rail with tally lamps; brand read (positioning, ICP, voice, proof shape) and an editable/prunable competitor map across DIRECT / ADJACENT / ATTENTION.
+- **Intake — ONE FIELD.** The user's website, nothing else. Brand name, market, country/language and category words are all read off the site and shown back as editable. Objective and brand-name override are optional, behind a disclosure.
+- **Automatic collection (autopilot).** Unattended from website to ranked board: reads the site, discovers who is really advertising by sweeping the public Ad Library for the site's own category words, runs one search per advertiser, files every ad found, then dedupes, scores and tears down. ~30s discovery, ~90s collection. Stops once, at the human gate.
+- **Competitor discovery is EVIDENCE, not a guess** — every advertiser on the map was seen running live ads in the market under a category word from the user's own site, and the row says which word found them.
+- **Provenance kind added: "read from the public Ad Library"** (LIB badge) — a weaker claim than a human seeing the ad, and distinct from it. Still no performance figure anywhere: Meta publishes none for commercial ads.
+- **Manual capture stays first-class** — the sweep is best-effort, so a blocked search or thin market leaves real gaps; the paste/screenshot composer fills them and is scored identically.
+- **Research console** — 15-step pipeline rail with tally lamps; live collection progress, brand read (positioning, ICP, voice, proof shape, plus what the site says and the words searched under) and an editable/prunable competitor map across DIRECT / ADJACENT / ATTENTION.
 - **Search plan** — one saved Ad Library search per competitor × country × language, each with an Open button. Users can paste their own search URL; the filters are parsed and shown back.
-- **Collect evidence** — three-pane capture tool. ⌘/Ctrl+V anywhere attaches a screenshot, ad copy or a Library link; Enter commits. Per-field `observed` toggles, live coverage meter with a "go and get" list.
+- **Collected ads (review)** — three panes: searches swept, the collected ads, live coverage with a "still missing" list. Manual composer is a disclosure below the list; ⌘/Ctrl+V still attaches a screenshot, ad copy or a Library link. "Sweep again" pulls in newer ads without duplicating what is on the board.
 - **Evidence board** — cards grouped by concept cluster, opportunity gauge always paired with its coverage band, provenance badge on every fact, teardown drawer showing the score's own arithmetic including dropped components.
 - **Human gate** — select angles, thin coverage requires an explicit "generate anyway", selection survives a refresh.
 - **Creative** — angle transfer + three hooks over one shared body, per-variant script/copy/render briefs, similarity + claim + brand + provenance + message-match gates, and a test plan.

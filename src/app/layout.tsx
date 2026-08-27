@@ -18,7 +18,7 @@ export async function generateMetadata(): Promise<Metadata> {
     openGraph: {
       title: "AdMirror — their best angle, your ad",
       description:
-        "Capture competitor ads from the public Ad Library, rank them honestly against what you actually captured, and generate your own variants on the same angle.",
+        "AdMirror reads your market's live ads from the public Ad Library, ranks them honestly against what was actually collected, and turns the angle you pick into your own variants.",
       type: "website",
     },
   };

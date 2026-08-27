@@ -1,11 +1,12 @@
 "use client";
 
 /**
- * S3-A — the saved searches, and the handoff moment.
+ * S3-A — the searches this run swept, and the escape hatch.
  *
- * The Open button is the most important control on this screen: it takes the user
- * out to the public Ad Library in their own browser. `rel="noopener noreferrer"`
- * on every one of them, and nothing here ever requests the URL itself.
+ * AdMirror runs these searches itself, so this pane is mostly a record of WHERE
+ * the ads on the board came from. The Open button still matters: it lets the user
+ * check our reading against the real page, which is the only way to trust it.
+ * `rel="noopener noreferrer"` on every one of them.
  */
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
@@ -40,7 +41,7 @@ export function SavedSearches({
   return (
     <div className="flex min-h-0 flex-col lg:h-full">
       <div className="flex min-w-0 items-center justify-between gap-3 border-b border-border px-4 py-2.5">
-        <Plate className="min-w-0 truncate">Saved searches</Plate>
+        <Plate className="min-w-0 truncate">Searches swept</Plate>
         <span className="tabular shrink-0 text-[11px] text-muted-foreground">{searches.length}</span>
       </div>
 
@@ -82,7 +83,7 @@ export function SavedSearches({
                   className="shrink-0"
                   onClick={() => onSelect(active ? null : row.id)}
                 >
-                  {active ? "Capturing against this" : "Capture against this"}
+                  {active ? "Adding against this" : "Add against this"}
                 </Button>
               </div>
 
@@ -100,7 +101,8 @@ export function SavedSearches({
           <div className="px-4 py-6">
             <Search size={17} strokeWidth={1.5} className="text-rack-seam" />
             <p className="mt-2 text-[13px] leading-relaxed text-muted-foreground">
-              No searches yet. Build them from the competitor map, or paste one of your own below.
+              No searches yet. They appear as soon as we&rsquo;ve found who advertises in your
+              market — or paste one of your own below.
             </p>
           </div>
         ) : null}
@@ -129,7 +131,7 @@ export function SavedSearches({
                   return;
                 }
                 setPasted("");
-                toast.success("Search saved. AdMirror stored the link and the filters — it won't visit it.");
+                toast.success("Search saved. Sweep again to pull its ads in.");
                 router.refresh();
               })
             }
@@ -147,7 +149,7 @@ export function SavedSearches({
                   {preview.summary}
                 </p>
                 <p className="mt-1.5 text-[11px] leading-relaxed text-muted-foreground">
-                  Stored as a link and a filter record. Nothing here fetches it.
+                  Saved. The next sweep will read this search too.
                 </p>
               </>
             ) : (

@@ -107,7 +107,7 @@ export function EvidenceBoard({
                 and open one of the saved searches.
               </p>
               <Button className="mt-4" onClick={() => router.push(`/runs/${run.id}/collect`)}>
-                Go and capture
+                Collect more
               </Button>
             </div>
           ) : (
@@ -120,7 +120,7 @@ export function EvidenceBoard({
                       {cluster.label}
                     </h2>
                     {cluster.items.length > 1 ? (
-                      <MetricChip provenance="derived_from_evidence" detail="Counted across the items you submitted.">
+                      <MetricChip provenance="derived_from_evidence" detail="Counted across the ads in this collection.">
                         Repeated across {cluster.items.length} submitted variants
                       </MetricChip>
                     ) : null}

@@ -107,7 +107,7 @@ export default async function CreativePage({ params }: { params: Promise<{ id: s
                       <div className="flex min-w-0 flex-wrap items-center gap-2">
                         <Plate>Angle inherited from</Plate>
                         <span className="min-w-0 truncate text-[13px] text-foreground">
-                          {source?.advertiser || "an ad you submitted"}
+                          {source?.advertiser || "a collected ad"}
                         </span>
                         {source?.libraryUrl ? (
                           <a

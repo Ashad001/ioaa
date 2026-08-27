@@ -2,11 +2,14 @@
  * Public Meta Ad Library search references.
  *
  * READ THIS BEFORE CHANGING ANYTHING HERE. This module builds and parses Ad
- * Library URLs as STRINGS. Nothing in AdMirror ever requests one — not to
- * validate it, not to fetch a preview, not in the background. A URL here is a
- * link the user clicks and a record of the filters they searched under. There is
- * deliberately no fetch, and adding one would break the promise the whole product
- * is built on.
+ * Library URLs as STRINGS ONLY — it performs no network request of any kind, and
+ * it must stay that way so a URL can be built and shown without side effects.
+ *
+ * Reading a search is a SEPARATE, deliberate act that lives in `sweep.ts`. That
+ * module reads the PUBLIC Library page — the same page anyone can open without an
+ * account — and it never produces a performance figure, because Meta publishes
+ * none for commercial ads. The promise the product rests on is not "we never
+ * fetch"; it is "every fact says where it came from, and we never invent one".
  */
 
 export const AD_LIBRARY_BASE = "https://www.facebook.com/ads/library/";

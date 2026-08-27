@@ -112,7 +112,7 @@ export function EbosGauge({
           <p className="font-medium">Opportunity score, within this evidence set</p>
           <p className="mt-1 text-xs opacity-85">
             {derivation ??
-              "Weighted over the signals you actually captured. Anything you didn't capture is dropped, not counted as zero."}
+              "Weighted over the signals actually present in this collection. Anything nobody captured is dropped, not counted as zero."}
           </p>
         </TooltipContent>
       </Tooltip>
@@ -124,7 +124,7 @@ export function EbosGauge({
   );
 }
 
-/** The live capture meter: what's in, what's missing, what to go and get. */
+/** The live coverage meter: what's in, what's missing, what a sweep couldn't reach. */
 export function CoverageMeter({
   coverage,
   header,
@@ -176,7 +176,7 @@ export function CoverageMeter({
 
       {coverage.gaps.length > 0 ? (
         <div className="border-t border-border/70 px-4 py-3.5">
-          <Plate className="block">Go and get</Plate>
+          <Plate className="block">Still missing</Plate>
           <ul className="mt-2 space-y-1.5">
             {coverage.gaps.map((gap) => (
               <li key={gap} className="flex gap-2 text-xs leading-relaxed text-foreground/85">

@@ -1,7 +1,6 @@
 import { notFound, redirect } from "next/navigation";
 import Link from "next/link";
 
-import { ensureOpenBatch } from "@/lib/admirror/ensure";
 import { CollectWorkspace } from "@/components/collect/collect-workspace";
 import { RunNav } from "@/components/run/run-nav";
 import { PaneHeader, RackShell } from "@/components/rack/shell";
@@ -9,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { getUser } from "@/lib/auth";
 import { computeCoverage, type ScoreItem } from "@/lib/admirror/scoring";
 import {
+  getBatches,
   getCompetitors,
   getItems,
   getRun,
@@ -24,19 +24,19 @@ export default async function CollectPage({ params }: { params: Promise<{ id: st
   const current = await getRun(id, user.id);
   if (!current) notFound();
 
-  // No open capture: start one so the screen is immediately usable. Closing a
-  // capture is the deliberate act, not opening one.
-  const batch = await ensureOpenBatch(
-    id,
-    `${current.marketLabel} — ${new Date().toLocaleDateString("en-GB", { day: "numeric", month: "short" })}`,
-  );
-
-  const [steps, searches, competitors, items] = await Promise.all([
+  const [steps, searches, competitors, batches] = await Promise.all([
     getSteps(id),
     getSearches(id),
     getCompetitors(id),
-    batch ? getItems(id, batch.id) : Promise.resolve([]),
+    getBatches(id),
   ]);
+
+  // Show the collection the user most recently got: an open one if the sweep is
+  // still gathering, otherwise the latest ranked one. A closed batch is the
+  // NORMAL state after an automatic sweep, so defaulting to "open only" would
+  // show an empty screen straight after a successful collection.
+  const batch = batches.find((row) => row.state === "open") ?? batches[0] ?? null;
+  const items = batch ? await getItems(id, batch.id) : [];
 
   const scoreItems: ScoreItem[] = items.map((item) => ({
     id: item.id,
@@ -59,27 +59,27 @@ export default async function CollectPage({ params }: { params: Promise<{ id: st
     <RackShell
       crumb={
         <span className="min-w-0 truncate">
-          {current.brandName} · {current.marketLabel} · capture
+          {current.brandName} · {current.marketLabel} · collected
         </span>
       }
       nav={<RunNav runId={id} steps={steps} activeStep="EVIDENCE_INTAKE" />}
       actions={
-        <Button variant="ghost" size="sm" render={<Link href={`/runs/${id}`} />}><span className="min-w-0 truncate">Console</span></Button>
+        <Button variant="ghost" size="sm" render={<Link href={`/runs/${id}`} />}>
+          <span className="min-w-0 truncate">Console</span>
+        </Button>
       }
     >
       <PaneHeader
-        title="Collect evidence"
-        hint="Open a search, paste what you find. Nothing here is fetched from Meta."
+        title="Collected ads"
+        hint="Read from the public Ad Library. Add anything it missed."
       />
-      {batch ? (
-        <CollectWorkspace
-          run={current}
-          searches={searches}
-          items={items}
-          batch={batch}
-          coverage={coverage}
-        />
-      ) : null}
+      <CollectWorkspace
+        run={current}
+        searches={searches}
+        items={items}
+        batch={batch}
+        coverage={coverage}
+      />
     </RackShell>
   );
 }
