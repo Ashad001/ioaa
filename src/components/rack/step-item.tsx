@@ -40,10 +40,8 @@ export function StepItem({
   const body = (
     <div
       className={cn(
-        "flex min-w-0 items-start gap-2.5 border-l-[1px] px-4 py-2.5 transition-colors duration-200 ease-out",
-        active
-          ? "border-l-primary bg-sidebar-accent/85"
-          : "border-l-transparent hover:bg-sidebar-accent/45",
+        "relative flex min-w-0 items-start gap-2.5 px-4 py-3 transition-colors duration-200 ease-out",
+        active ? "bg-primary/[0.09]" : "hover:bg-sidebar-accent/45",
       )}
     >
       <span className="mt-[7px] flex shrink-0 items-center">
@@ -71,6 +69,7 @@ export function StepItem({
               : STATE_LABEL[state] ?? detail}
         </span>
       </span>
+      {active ? <span aria-hidden className="absolute inset-x-4 bottom-0 h-px bg-primary/70" /> : null}
     </div>
   );
 

@@ -3,30 +3,30 @@ import { ArrowUpRight, Eye, Radar, ScanSearch } from "lucide-react";
 import { EdgeCode, Plate } from "@/components/rack/plate";
 
 const SIGNALS = [
-  { label: "Field reading", value: "Awaiting website", trend: "Your category sets the search" },
-  { label: "Rival set", value: "You approve", trend: "No collection before the list is right" },
-  { label: "Evidence board", value: "Live ads", trend: "Artwork and reach stay attached" },
+  { label: "Market", value: "Awaiting site", trend: "Your category sets the search" },
+  { label: "Rival list", value: "Needs approval", trend: "Nothing is read before you confirm it" },
+  { label: "Evidence", value: "Live ads", trend: "Creative and published reach stay attached" },
 ];
 
 export function MarketBrief() {
   return (
     <div className="min-w-0">
       <div className="flex min-w-0 items-center justify-between gap-3">
-        <Plate className="min-w-0 truncate">Market intelligence</Plate>
-        <EdgeCode className="shrink-0">Ready to read</EdgeCode>
+        <Plate className="min-w-0 truncate">Competitive ads, read directly</Plate>
+        <EdgeCode className="shrink-0">Ready</EdgeCode>
       </div>
-      <h1 className="mt-4 max-w-[11ch] text-balance text-[34px] font-semibold leading-[0.98] tracking-[-0.05em] text-foreground sm:text-[48px]">
-        See what your market is saying now.
+      <h1 className="mt-4 max-w-[12ch] text-balance text-[34px] font-semibold leading-[0.98] tracking-[-0.05em] text-foreground sm:text-[48px]">
+        Find the angle your market is using right now.
       </h1>
       <p className="mt-5 max-w-[56ch] text-[14.5px] leading-relaxed text-muted-foreground">
-        AdMirror maps the live ads in your field, holds onto the evidence, then turns the angle you choose into original creative for your business.
+        Start with your website. AdMirror maps the advertisers around you, keeps the proof with each finding, and helps you turn a selected angle into original creative.
       </p>
 
       <div className="mt-9 overflow-hidden rounded-md border border-border bg-card">
         <div className="flex min-w-0 items-center justify-between gap-3 border-b border-border px-4 py-3">
           <div className="flex min-w-0 items-center gap-2">
             <Radar size={15} strokeWidth={1.7} className="shrink-0 text-primary" />
-            <span className="min-w-0 truncate text-[13px] font-medium">Market pulse</span>
+            <span className="min-w-0 truncate text-[13px] font-medium">Analysis status</span>
           </div>
           <span className="inline-flex shrink-0 items-center gap-1.5 font-mono text-[10px] uppercase tracking-[0.12em] text-primary">
             <span className="size-1.5 rounded-full bg-primary lamp-pulsing" />
@@ -54,7 +54,7 @@ export function MarketBrief() {
       </div>
 
       <p className="mt-3 max-w-[60ch] text-[11.5px] leading-relaxed text-muted-foreground">
-        Meta only publishes selected reach ranges. AdMirror never fills in spend, clicks, sales, or a made-up performance score.
+        Meta only publishes selected reach ranges. AdMirror does not estimate spend, clicks, sales, or a performance score.
       </p>
     </div>
   );
