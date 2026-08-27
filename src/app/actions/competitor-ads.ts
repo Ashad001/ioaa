@@ -42,6 +42,12 @@ export async function collectCompetitorAds(input: {
       .where(and(eq(run.id, input.runId), eq(run.userId, user.id)))
       .limit(1);
     if (!current) return { ok: false, error: "That run doesn't exist, or it isn't yours." };
+    if (!current.profileApproved) {
+      return {
+        ok: false,
+        error: "Approve your company profile first — that's what decides who we collect.",
+      };
+    }
 
     const [target] = await db
       .select()

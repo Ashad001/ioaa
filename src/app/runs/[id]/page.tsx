@@ -164,6 +164,7 @@ export default async function RunConsolePage({ params }: { params: Promise<{ id:
                     hasCompetitors={competitors.length > 0}
                     hasEvidence={hasEvidence}
                     awaitingGate={awaitingGate}
+                    profileApproved={fresh.profileApproved}
                   />
                 </div>
               </Panel>

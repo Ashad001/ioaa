@@ -25,11 +25,18 @@ export function AutopilotRunner({
   hasCompetitors,
   hasEvidence,
   awaitingGate,
+  profileApproved,
 }: {
   runId: string;
   hasCompetitors: boolean;
   hasEvidence: boolean;
   awaitingGate: boolean;
+  /**
+   * The gate. Collection reads real ads and costs real lookups, so it must never
+   * start on its own from a list the user has not approved — that was the whole
+   * bug the profile stage exists to fix.
+   */
+  profileApproved: boolean;
 }) {
   const router = useRouter();
   const started = useRef(false);
@@ -69,12 +76,39 @@ export function AutopilotRunner({
   );
 
   useEffect(() => {
-    if (started.current || hasEvidence) return;
+    if (started.current || hasEvidence || !profileApproved) return;
     started.current = true;
     void run({ fromDiscovery: !hasCompetitors });
-  }, [hasCompetitors, hasEvidence, run]);
+  }, [hasCompetitors, hasEvidence, profileApproved, run]);
 
   const busy = phase === "discovering" || phase === "collecting";
+
+  // NOT APPROVED YET. Say so, and send them to the one screen where the decision
+  // is made — rather than a lamp that sits idle with no explanation.
+  if (!profileApproved) {
+    return (
+      <div className="min-w-0 space-y-3">
+        <div className="flex min-w-0 items-start gap-2.5">
+          <span className="mt-[5px] flex shrink-0 items-center">
+            <Lamp state="hold" />
+          </span>
+          <div className="min-w-0 flex-1">
+            <p className="text-[13px] leading-relaxed text-foreground/90">
+              Nothing is being collected yet
+            </p>
+            <p className="mt-1 max-w-[65ch] text-[12px] leading-relaxed text-muted-foreground">
+              Your company profile and competitor list decide who gets read, so collection waits
+              until you have looked at them and approved the list.
+            </p>
+          </div>
+        </div>
+        <Button size="sm" onClick={() => router.push(`/runs/${runId}/profile`)}>
+          <span className="min-w-0 truncate">Review my profile and rivals</span>
+          <ArrowRight size={14} strokeWidth={1.8} />
+        </Button>
+      </div>
+    );
+  }
 
   return (
     <div className="min-w-0 space-y-3">

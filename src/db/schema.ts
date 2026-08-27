@@ -154,6 +154,11 @@ export const run = pgTable(
     stepCursor: text("step_cursor").notNull().default("1"),
     /** Brand dossier, stored as JSON text so it stays inspectable. */
     dossier: text("dossier"),
+    /**
+     * The company-profile gate. Ads are NEVER looked up until the user has read
+     * the profile built from their own site and confirmed the rival list.
+     */
+    profileApproved: boolean("profile_approved").notNull().default(false),
     createdAt: timestamp("created_at").notNull().defaultNow(),
     updatedAt: timestamp("updated_at").notNull().defaultNow(),
   },
@@ -198,6 +203,31 @@ export const competitor = pgTable(
     /** 0–100, a model's confidence in this being a real competitor here. */
     confidence: text("confidence").notNull().default("50"),
     pruned: boolean("pruned").notNull().default(false),
+    /**
+     * ── THE COMPETITOR PROFILE ───────────────────────────────────────────────
+     * Who this company is, before a single one of their ads is collected. Every
+     * field is a READING with its own basis, never a claimed fact: the field and
+     * category come from the classifier, the positioning line from their own ad
+     * copy, and `foundVia` records exactly how they entered the list. A rival
+     * the user cannot interrogate is indistinguishable from a name we invented.
+     */
+    field: text("field").notNull().default(""),
+    categoryLabel: text("category_label").notNull().default(""),
+    /** DIRECT category, a NEIGHBOUR category, or named by the user. */
+    categoryRelation: text("category_relation").notNull().default("unknown"),
+    /** One sentence on how they position themselves, read from their own ads. */
+    positioning: text("positioning").notNull().default(""),
+    /** named_by_you · your_site · category_sweep · neighbour_sweep */
+    foundVia: text("found_via").notNull().default("named_by_you"),
+    /** The search term they surfaced under, when they came from a sweep. */
+    foundUnder: text("found_under").notNull().default(""),
+    /** Live ads seen for them during the lookup — a count, never a performance figure. */
+    adsSeen: text("ads_seen").notNull().default("0"),
+    /** Their own site/display link, where their ads published one. */
+    displayLink: text("display_link").notNull().default(""),
+    /** Where the platform published a reach band, the widest one, verbatim. */
+    reachBand: text("reach_band").notNull().default(""),
+    profiledAt: timestamp("profiled_at"),
   },
   (t) => [index("competitor_run_idx").on(t.runId)],
 );

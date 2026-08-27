@@ -46,11 +46,11 @@ export const STAGES: StageDef[] = [
   {
     n: 2,
     id: "market",
-    title: "Who's advertising",
-    detail: "Rivals found running live ads",
-    actor: "auto",
+    title: "Your field & rivals",
+    detail: "Profiles to approve before anything is collected",
+    actor: "you",
     steps: ["COMPETITOR_MAP", "DISCOVERY_PLAN"],
-    href: "",
+    href: "profile",
   },
   {
     n: 3,

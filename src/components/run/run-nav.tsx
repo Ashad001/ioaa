@@ -35,9 +35,14 @@ export function RunNav({
       {STAGES.map((stage) => {
         const { state, detail } = rollUp(stage, byName);
         // A stage is reachable once it has actually started — a link to a screen
-        // with nothing on it is worse than no link.
+        // with nothing on it is worse than no link. The profile stage is the one
+        // exception: it is where the user DECIDES what gets collected, so it must
+        // be reachable from the first moment rather than after something ran.
         const reachable =
-          state === "done" || state === "blocked_on_user" || state === "running";
+          stage.id === "market" ||
+          state === "done" ||
+          state === "blocked_on_user" ||
+          state === "running";
         return (
           <StepItem
             key={stage.id}

@@ -1,6 +1,6 @@
 ---
 name: "AdMirror"
-description: "A competitive-creative engine for paid social: give it your website, it finds who advertises against you, collects their live ads out of the Meta Ad Library with the artwork attached, puts the hardest-working ones first (using the reach Meta actually publishes), then turns the angle you pick into three original ad variants and a test plan."
+description: "A competitive-creative engine for paid social: give it your website, it builds a profile of your company and works out what field you're in, looks up the companies advertising in that field and the ones next to it, profiles each of them from their own live ads, and — once you approve that list — collects their ads out of the Meta Ad Library with the artwork attached, puts the hardest-working ones first (using the reach Meta actually publishes), then turns the angle you pick into three original ad variants and a test plan."
 colors:
   background: "oklch(0.171 0.013 252)"
   foreground: "oklch(0.951 0.005 247)"

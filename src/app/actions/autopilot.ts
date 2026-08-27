@@ -174,6 +174,22 @@ export async function autoResearch(runId: string): Promise<ActionResult> {
     const user = await requireUser();
     const current = await ownedRun(runId, user.id);
 
+    // THE PROFILE GATE. Nothing reaches the ad reader until the user has read
+    // the company profile and confirmed who to study. Without this check the
+    // old behaviour returns: category words become searches nobody agreed to.
+    if (!current.profileApproved) {
+      await setStep(
+        runId,
+        "COMPETITOR_MAP",
+        "blocked_on_user",
+        "Check your profile and rivals, then start collecting",
+      );
+      return {
+        ok: false,
+        error: "Approve your company profile first — that's what decides who we collect.",
+      };
+    }
+
     // ── Step 2: brand read, from the site's own words where we have them.
     await setStep(runId, "BRAND_RESEARCH", "running");
 
@@ -427,6 +443,15 @@ export async function autoCollect(runId: string): Promise<ActionResult> {
   try {
     const user = await requireUser();
     const current = await ownedRun(runId, user.id);
+
+    // Same gate as discovery. A collection is a set of reads against named
+    // companies, and the user names them on the profile screen.
+    if (!current.profileApproved) {
+      return {
+        ok: false,
+        error: "Approve your company profile first — that's what decides who we collect.",
+      };
+    }
 
     await setStep(runId, "EVIDENCE_INTAKE", "running", "Reading the public Ad Library");
 

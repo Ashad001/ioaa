@@ -73,11 +73,11 @@ export function IntakeForm({
         toast.error(result.error);
         return;
       }
-      router.push(`/runs/${result.id}`);
+      router.push(`/runs/${result.id}/profile`);
     });
   };
 
-  const armed = website.trim().length > 2 && competitorNames.trim().length > 1;
+  const armed = website.trim().length > 2;
 
   return (
     <div className="min-h-0 flex-1 overflow-y-auto">
@@ -97,9 +97,10 @@ export function IntakeForm({
               your next angle.
             </h1>
             <p className="mt-4 max-w-[58ch] text-[14.5px] leading-relaxed text-muted-foreground">
-              Start with the companies you want to study. AdMirror reads their currently observed
-              ads from the public Ad Library, keeps the creative attached, and lays them out in one
-              comparable sheet. Your website keeps the resulting angles grounded in what you sell.
+              Give AdMirror your website. It works out what you sell and what field you&rsquo;re in,
+              finds the companies advertising in that field and the ones next to it, and builds a
+              profile for each one from their own live ads — before a single ad is collected. You
+              approve the list, then the sheet loads.
             </p>
 
             <div className="mt-8 min-w-0">
@@ -117,7 +118,7 @@ export function IntakeForm({
           <form onSubmit={submit} className="min-w-0">
             <div className="panel lightbox min-w-0 rounded-sm p-4 sm:p-5">
               <fieldset className="min-w-0 space-y-4">
-                <Plate as="legend">Build your tracking list</Plate>
+                <Plate as="legend">Start with your company</Plate>
 
                 <div className="min-w-0 space-y-1.5">
                   <Label htmlFor="site">Your website</Label>
@@ -132,24 +133,23 @@ export function IntakeForm({
                     className="h-12 font-mono text-[15px]"
                   />
                   <p className="text-[11.5px] leading-relaxed text-muted-foreground">
-                    This grounds the original ad ideas in what you sell. It does not decide who we
-                    track.
+                    Read for what you sell and what field you compete in — which is what decides
+                    who gets looked up.
                   </p>
                 </div>
 
                 <div className="min-w-0 space-y-1.5">
-                  <Label htmlFor="competitors">Competitors to track</Label>
+                  <Label htmlFor="competitors">Competitors you already know — optional</Label>
                   <Textarea
                     id="competitors"
-                    required
                     value={competitorNames}
                     onChange={(event) => setCompetitorNames(event.target.value)}
                     placeholder={"ImagineArt\nHiggsfield\nRunway"}
                     className="min-h-28 resize-y font-mono text-[14px]"
                   />
                   <p className="text-[11.5px] leading-relaxed text-muted-foreground">
-                    One brand per line or comma-separated. We collect directly from each advertiser,
-                    not from a broad keyword search.
+                    One brand per line. Leave it empty and AdMirror looks up who advertises in your
+                    field for you — you approve the list either way.
                   </p>
                 </div>
               </fieldset>

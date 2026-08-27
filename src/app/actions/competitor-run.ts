@@ -1,5 +1,16 @@
 "use server";
 
+/**
+ * START A RUN — website first, competitor names optional.
+ *
+ * The names used to be REQUIRED, because collection went straight from a name to
+ * a lookup. It doesn't any more: the run now opens on the profile screen, where
+ * the company is read, the field is decided, and the rival list is looked up out
+ * of that field's own advertising vocabulary. So a user who knows exactly who
+ * they compete with can type them here and skip a step, and a user who doesn't
+ * gets the same list found for them.
+ */
+
 import { addCompetitor } from "@/app/actions/runs";
 import { startAutoRun, type ActionResult } from "@/app/actions/autopilot";
 
@@ -17,10 +28,6 @@ export async function startCompetitorRun(input: {
         .map((name) => [name.toLocaleLowerCase(), name]),
     ).values(),
   );
-
-  if (names.length === 0) {
-    return { ok: false, error: "Add at least one competitor to track." };
-  }
 
   const created = await startAutoRun({
     website: input.website,

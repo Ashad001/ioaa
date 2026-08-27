@@ -21,7 +21,7 @@ export function Plate({
 }: {
   children: ReactNode;
   className?: string;
-  as?: "span" | "div" | "h2" | "h3" | "legend";
+  as?: "span" | "div" | "h2" | "h3" | "legend" | "label";
 }) {
   return <Tag className={cn("plate text-rack-engrave", className)}>{children}</Tag>;
 }
