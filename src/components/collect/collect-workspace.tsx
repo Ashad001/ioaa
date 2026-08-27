@@ -58,15 +58,14 @@ export function CollectWorkspace({
   const [pending, startTransition] = useTransition();
   const [sweeping, setSweeping] = useState(false);
   const [activeSearchId, setActiveSearchId] = useState<string | null>(searches[0]?.id ?? null);
-  const [composerOpen, setComposerOpen] = useState(!readerConnected);
+  const [composerOpen, setComposerOpen] = useState(false);
   /**
-   * Two ways to fill a gap, and the right default depends on the truth of the
-   * moment: with no reader connected, importing from the user's own browser is
-   * the ONLY route that returns real rival ads, so it opens first.
+   * Two ways to fill a gap. AdMirror now reads the Library itself on every run,
+   * so both of these are for the REMAINDER — a search that came back unread, or
+   * an ad spotted somewhere the Library doesn't cover. Neither is the main route
+   * any more, so neither opens by default.
    */
-  const [intake, setIntake] = useState<"browser" | "manual">(
-    readerConnected ? "manual" : "browser",
-  );
+  const [intake, setIntake] = useState<"browser" | "manual">("browser");
 
   const activeSearch = searches.find((row) => row.id === activeSearchId) ?? null;
   const sweptCount = items.filter(
@@ -103,9 +102,7 @@ export function CollectWorkspace({
                   {withArt > 0 ? ` · ${withArt} with artwork` : ""}
                 </>
               ) : (
-                readerConnected
-                  ? "Nothing collected automatically yet — sweep again, or add what you saw."
-                  : "Nothing read automatically — bring the ads back from your own browser below. It works with nothing connected."
+                "Nothing on the sheet yet — press Sweep again to read the Library, or add what you saw."
               )}
             </p>
           </div>

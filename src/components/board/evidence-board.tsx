@@ -190,6 +190,8 @@ export function EvidenceBoard({
                                 artefactType={item.artefactType}
                                 creativeUrl={item.creativeUrl}
                                 isVideo={item.isVideo}
+                                videoUrl={item.videoUrl}
+                                videoDuration={item.videoDuration}
                                 modality={item.modality}
                               />
                               <span

@@ -179,6 +179,8 @@ export function CapturedList({ runId, items }: { runId: string; items: EvidenceR
                   artefactType={item.artefactType}
                   creativeUrl={item.creativeUrl}
                   isVideo={item.isVideo}
+                  videoUrl={item.videoUrl}
+                  videoDuration={item.videoDuration}
                   modality={item.modality}
                 />
               </div>

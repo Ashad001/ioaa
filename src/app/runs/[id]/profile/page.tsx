@@ -13,7 +13,7 @@ import { Panel, Readout } from "@/components/rack/plate";
 import { ReaderStatus } from "@/components/run/reader-status";
 import { RunNav } from "@/components/run/run-nav";
 import { CATEGORIES } from "@/lib/admirror/category";
-import { feedConfigured } from "@/lib/admirror/library-feed";
+import { readerAvailable } from "@/lib/admirror/library-feed";
 import {
   composeProfile,
   plannedTerms,
@@ -140,7 +140,7 @@ export default async function ProfilePage({ params }: { params: Promise<{ id: st
         hint="Every line here is a reading you can correct. Nothing is collected until you approve it."
       />
 
-      <ReaderStatus connected={feedConfigured()} context="start" />
+      <ReaderStatus connected={readerAvailable()} context="start" />
 
       <div className="min-h-0 flex-1 overflow-y-auto">
         <div className="grid min-w-0 gap-4 p-4 sm:p-6 xl:grid-cols-[minmax(0,1fr)_320px]">

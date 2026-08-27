@@ -73,6 +73,14 @@ export type LiveAd = {
   advertiserAvatarUrl: string | null;
   isVideo: boolean;
   euTransparency: boolean;
+  /**
+   * THE VIDEO FILE the card played, when the ad runs one. A pointer to Meta's
+   * own address, never a copy, so nothing heavy is stored. `creativeUrl` holds
+   * the poster frame for the same ad, so a card always has something to show.
+   */
+  videoUrl?: string | null;
+  /** How long the card said the video runs, verbatim (e.g. "0:15"). */
+  videoDuration?: string | null;
 };
 
 export type FeedState = "ok" | "empty" | "no_key" | "failed" | "rate_limited";
@@ -403,7 +411,7 @@ async function requestWithRetry(
  * Read ONE keyword search of the live Library. Never throws — a failure is a
  * state with a note, because one bad search must not take a run down.
  */
-export async function readSearch(
+async function readSearchViaApi(
   spec: SearchSpec,
   options: { limit?: number; sortBy?: "total_impressions" | "relevancy_monthly_grouped" } = {},
 ): Promise<FeedOutcome> {
@@ -456,7 +464,7 @@ export async function readSearch(
  * "show me my competitor's ads" directly, rather than hoping a keyword search
  * happens to surface them.
  */
-export async function readCompanyAds(
+async function readCompanyAdsViaApi(
   input: { companyName: string; pageId?: string | null; country: string; language: string; includeInactive?: boolean },
   options: { limit?: number } = {},
 ): Promise<FeedOutcome> {
@@ -506,7 +514,7 @@ export async function readCompanyAds(
 }
 
 /** Read several searches, a few lanes at a time. */
-export async function readMany(
+async function readManyViaApi(
   specs: SearchSpec[],
   options: {
     concurrency?: number;
@@ -526,8 +534,8 @@ export async function readMany(
       cursor += 1;
       if (index >= specs.length) return;
       const outcome = options.advertiserFallback
-        ? await readSearchOrAdvertiser(specs[index], { limit: options.limit })
-        : await readSearch(specs[index], { limit: options.limit });
+        ? await readSearchOrAdvertiserViaApi(specs[index], { limit: options.limit })
+        : await readSearchViaApi(specs[index], { limit: options.limit });
       results[index] = outcome;
       if (options.onSettled) await options.onSettled(index, outcome);
     }
@@ -552,14 +560,14 @@ export async function readMany(
  * not resolve the first one. The route that answered is carried on the outcome
  * so nothing on screen has to guess.
  */
-export async function readSearchOrAdvertiser(
+async function readSearchOrAdvertiserViaApi(
   spec: SearchSpec,
   options: { limit?: number } = {},
 ): Promise<FeedOutcome> {
-  const keyword = await readSearch(spec, options);
+  const keyword = await readSearchViaApi(spec, options);
   if (keyword.state !== "empty") return { ...keyword, route: "keyword" };
 
-  const direct = await readCompanyAds(
+  const direct = await readCompanyAdsViaApi(
     {
       companyName: spec.competitorName,
       country: spec.country,
@@ -593,4 +601,133 @@ export async function readSearchOrAdvertiser(
         : keyword.note,
     attempts: (keyword.attempts ?? 1) + (direct.attempts ?? 1),
   };
+}
+
+
+/* ══════════════════════════════════════════════════════════════════════════
+   THE ROUTER — which reader answers, and why.
+
+   There are two ways to read the public Ad Library, and the app now picks
+   between them ON ITS OWN. Nothing about this is a user setting, and there is
+   nothing for the owner to connect:
+
+   1. THE BROWSER READER (default, always available). A real headless browser on
+      this app's own server clears Meta's bot challenge and reads the rendered
+      public page. Needs no key. It cannot report a reach figure, because the
+      public page prints none for a commercial ad.
+   2. THE READ API (only when a key happens to be present). Same public facts,
+      plus the ONE figure Meta publishes through its own API surface and the page
+      does not: a banded impressions total. When a key exists this route is
+      preferred, purely because that extra published figure makes the ranking
+      sharper.
+
+   `no_key` IS NO LONGER A REACHABLE OUTCOME for collection. It stays in the type
+   because older rows and older notes reference it, but a missing key is no
+   longer a dead end — it just means route 1 answers.
+   ══════════════════════════════════════════════════════════════════════════ */
+
+/** Which reader is answering right now, in the user's language. */
+export type ReaderRoute = "browser" | "api";
+
+export function activeReaderRoute(): ReaderRoute {
+  return feedConfigured() ? "api" : "browser";
+}
+
+/**
+ * Collection ALWAYS has a working reader now. Kept as a function so callers read
+ * intent rather than a bare `true`, and so a future genuinely-unavailable case
+ * has one place to live.
+ */
+export function readerAvailable(): boolean {
+  return true;
+}
+
+/** Read ONE keyword search. Routes itself; never needs a key. */
+export async function readSearch(
+  spec: SearchSpec,
+  options: { limit?: number; sortBy?: "total_impressions" | "relevancy_monthly_grouped" } = {},
+): Promise<FeedOutcome> {
+  if (feedConfigured()) {
+    const viaApi = await readSearchViaApi(spec, options);
+    if (viaApi.state !== "no_key") return viaApi;
+  }
+  const { readSearchWithBrowser } = await import("./library-browser");
+  return readSearchWithBrowser(spec, { limit: options.limit });
+}
+
+/** Read ONE named advertiser's live ads. Routes itself; never needs a key. */
+export async function readCompanyAds(
+  input: {
+    companyName: string;
+    pageId?: string | null;
+    country: string;
+    language: string;
+    includeInactive?: boolean;
+  },
+  options: { limit?: number } = {},
+): Promise<FeedOutcome> {
+  if (feedConfigured()) {
+    const viaApi = await readCompanyAdsViaApi(input, options);
+    if (viaApi.state !== "no_key") return viaApi;
+  }
+  // Without the API there is no "look this company up by id" endpoint — but the
+  // public page searches by name perfectly well, which is the same question.
+  const { readSearchWithBrowser } = await import("./library-browser");
+  return readSearchWithBrowser(
+    {
+      competitorName: input.companyName,
+      country: input.country,
+      language: input.language,
+      mediaType: "all",
+      activeStatus: input.includeInactive ? "all" : "active",
+    },
+    { limit: options.limit },
+  );
+}
+
+/**
+ * Read a keyword search and, if it comes back empty, ask for the advertiser by
+ * name. Routes itself.
+ */
+export async function readSearchOrAdvertiser(
+  spec: SearchSpec,
+  options: { limit?: number } = {},
+): Promise<FeedOutcome> {
+  if (feedConfigured()) {
+    const viaApi = await readSearchOrAdvertiserViaApi(spec, options);
+    if (viaApi.state !== "no_key") return viaApi;
+  }
+  // On the browser route the keyword search IS the advertiser search — the same
+  // public page answers both — so one read settles it and a second would only
+  // ask the same question twice.
+  const { readSearchWithBrowser } = await import("./library-browser");
+  const outcome = await readSearchWithBrowser(spec, { limit: options.limit });
+  return { ...outcome, route: "keyword" };
+}
+
+/**
+ * Read many searches. Routes itself.
+ *
+ * On the browser route this is where the win is: ONE browser is launched and
+ * every search shares it, so a dozen rivals cost one launch rather than twelve.
+ */
+export async function readMany(
+  specs: SearchSpec[],
+  options: {
+    concurrency?: number;
+    limit?: number;
+    advertiserFallback?: boolean;
+    onSettled?: (index: number, outcome: FeedOutcome) => void | Promise<void>;
+  } = {},
+): Promise<FeedOutcome[]> {
+  if (feedConfigured()) {
+    const viaApi = await readManyViaApi(specs, options);
+    if (!viaApi.some((outcome) => outcome.state === "no_key")) return viaApi;
+  }
+  const { readManyWithBrowser } = await import("./library-browser");
+  return readManyWithBrowser(specs, {
+    limit: options.limit,
+    concurrency: options.concurrency,
+    onSettled: options.onSettled,
+  });
 }

@@ -826,6 +826,11 @@ function sweptToEvidence(
     creativeUrl: ad.creativeUrl,
     advertiserAvatarUrl: ad.advertiserAvatarUrl,
     isVideo: ad.isVideo,
+    // The video file the card played, and how long it ran — both pointers to
+    // Meta's own addresses, never copies. The poster frame lives in creativeUrl,
+    // so a video ad still shows something if the video address goes dead.
+    videoUrl: ad.videoUrl ?? null,
+    videoDuration: ad.videoDuration ?? null,
     // Reach, only where Meta publishes one. Absent stays absent.
     impressionsLower: ad.impressionsLower === null ? null : String(ad.impressionsLower),
     impressionsUpper: ad.impressionsUpper === null ? null : String(ad.impressionsUpper),

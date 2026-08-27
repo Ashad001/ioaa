@@ -76,9 +76,9 @@ export function BrowserImport({
       <div className="min-w-0 border-l-2 border-primary/70 bg-primary/[0.05] px-3.5 py-3">
         <Plate className="block">Read it in your own browser</Plate>
         <p className="mt-1 max-w-[65ch] text-[11.5px] leading-relaxed text-muted-foreground">
-          The Ad Library is public — your browser can open it even where a server
-          can&rsquo;t. Copy the page and AdMirror reads the ads straight off it. Nothing to sign
-          up for, nothing to connect.
+          AdMirror already reads the Library itself on every sweep. This is the backup for a
+          search that keeps coming back unread: open it yourself, copy the page, and the ads
+          land on the sheet the same way.
         </p>
 
         <ol className="mt-2.5 space-y-1">

@@ -6,7 +6,7 @@ import { IntakeForm } from "@/components/intake/intake-form";
 import { MarketBrief } from "@/components/intake/market-brief";
 import { RackShell } from "@/components/rack/shell";
 import { Button } from "@/components/ui/button";
-import { feedConfigured } from "@/lib/admirror/library-feed";
+import { readerAvailable } from "@/lib/admirror/library-feed";
 import { getUser } from "@/lib/auth";
 
 export default async function HomePage() {
@@ -37,7 +37,7 @@ export default async function HomePage() {
         </Button>
       }
     >
-      <IntakeForm readerConnected={feedConfigured()} />
+      <IntakeForm readerConnected={readerAvailable()} />
     </RackShell>
   );
 }

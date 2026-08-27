@@ -9,7 +9,7 @@ import { MarketChart, type MarketAd } from "@/components/run/market-chart";
 import { RunNav } from "@/components/run/run-nav";
 import { readReach } from "@/lib/admirror/reach";
 import { ReaderStatus } from "@/components/run/reader-status";
-import { feedConfigured } from "@/lib/admirror/library-feed";
+import { readerAvailable } from "@/lib/admirror/library-feed";
 import { EdgeCode, Lamp, Panel, Plate, Readout } from "@/components/rack/plate";
 import { PaneHeader, RackShell } from "@/components/rack/shell";
 import { Button } from "@/components/ui/button";
@@ -70,7 +70,7 @@ export default async function RunConsolePage({ params }: { params: Promise<{ id:
   }
 
   const objectives = fresh.objectives.split(",").filter(Boolean);
-  const readerConnected = feedConfigured();
+  const readerConnected = readerAvailable();
   const hasEvidence = items.length > 0;
   const awaitingGate = fresh.status === "AWAITING_GATE";
   const siteRead = dossier?.siteRead;

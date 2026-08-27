@@ -381,6 +381,19 @@ export const evidenceItem = pgTable(
     isVideo: boolean("is_video").notNull().default(false),
 
     /**
+     * THE VIDEO ITSELF, when the ad runs one.
+     *
+     * Same rule as `creativeUrl`: a POINTER to the file the Library card played,
+     * never a copy, so nothing large is stored or re-hosted and the address can
+     * go dead when Meta rotates it. `creativeUrl` holds the poster frame for the
+     * same ad, so a card always has something to show even before the video
+     * loads — and still has something if the video address dies.
+     */
+    videoUrl: text("video_url"),
+    /** How long the card said the video runs, verbatim (e.g. "0:15"). */
+    videoDuration: text("video_duration"),
+
+    /**
      * REACH, AS META PUBLISHES IT — and only when it does.
      *
      * Meta prints no impressions on an ordinary commercial ad card, but its own

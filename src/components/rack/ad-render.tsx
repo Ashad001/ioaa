@@ -34,6 +34,8 @@ export function AdRender({
   artefactType,
   creativeUrl,
   isVideo,
+  videoUrl,
+  videoDuration,
   modality,
   className,
 }: {
@@ -46,10 +48,20 @@ export function AdRender({
   /** The picture the public card displayed. A reference, not a copy. */
   creativeUrl?: string | null;
   isVideo?: boolean;
+  /**
+   * THE RIVAL'S ACTUAL VIDEO, when the Library card played one. A pointer to
+   * Meta's own address, so it streams exactly as it would on the real page and
+   * nothing is re-hosted. It can go dead without notice, hence the poster frame
+   * underneath it and the fallback below.
+   */
+  videoUrl?: string | null;
+  /** How long the card said it runs, verbatim (e.g. "0:15"). */
+  videoDuration?: string | null;
   modality: string;
   className?: string;
 }) {
   const [pictureFailed, setPictureFailed] = useState(false);
+  const [videoFailed, setVideoFailed] = useState(false);
   const uploadIsVideo = (artefactType ?? "").startsWith("video/");
 
   // A recording the user attached themselves.
@@ -63,6 +75,33 @@ export function AdRender({
           playsInline
           className="aspect-[4/5] w-full object-cover"
         />
+      </div>
+    );
+  }
+
+  // THE RIVAL'S OWN VIDEO — the strongest evidence of a video ad there is, so it
+  // outranks the still. Poster frame attached so the frame is never blank while
+  // it loads, and `preload="metadata"` so a board of twenty cards doesn't pull
+  // twenty video files down at once.
+  if (videoUrl && !videoFailed) {
+    return (
+      <div className={cn("emulsion relative overflow-hidden rounded-sm", className)}>
+        {/* eslint-disable-next-line jsx-a11y/media-has-caption */}
+        <video
+          src={videoUrl}
+          poster={creativeUrl ?? undefined}
+          controls
+          preload="metadata"
+          playsInline
+          onError={() => setVideoFailed(true)}
+          className="aspect-[4/5] w-full bg-film-base object-cover"
+        />
+        {videoDuration ? (
+          <span className="pointer-events-none absolute right-2 top-2 flex items-center gap-1.5 rounded-[3px] bg-film-base/85 px-1.5 py-1 backdrop-blur-sm">
+            <Play size={9} strokeWidth={2.5} className="text-film-edge" />
+            <Plate className="text-film-edge">{videoDuration}</Plate>
+          </span>
+        ) : null}
       </div>
     );
   }
@@ -89,7 +128,9 @@ export function AdRender({
         {isVideo ? (
           <span className="absolute bottom-2 left-2 flex items-center gap-1.5 rounded-[3px] bg-film-base/85 px-1.5 py-1 backdrop-blur-sm">
             <Play size={10} strokeWidth={2.5} className="text-film-edge" />
-            <Plate className="text-film-edge">Video</Plate>
+            <Plate className="text-film-edge">
+              {videoFailed ? "Video expired" : videoDuration ? videoDuration : "Video"}
+            </Plate>
           </span>
         ) : null}
       </div>

@@ -1,43 +1,54 @@
 /**
- * READER STATUS — the honest banner, shown BEFORE a run rather than after it.
+ * READER STATUS — what the ad reader can do right now, stated up front.
  *
- * WHY THIS EXISTS. Until now the app only admitted the ad reader wasn't
- * connected once a collection had already run and come back with nothing. That
- * is the worst possible moment to say it: the user has watched a progress lamp
- * for forty seconds, believed the app was working, and then received what reads
- * like a failure. The information existed the whole time.
+ * WHY THIS EXISTS. Collection used to depend on a connected read API, and when it
+ * was missing every search came back unread. The worst version of that was
+ * silent: the user watched a progress lamp, then got what looked like an empty
+ * market. So this banner existed to name the missing connection early.
  *
- * So the state is read on the server and stated at the top of the two screens
- * where someone is about to start or watch a collection. It is deliberately not
- * a modal and not a blocker — everything else in the app still works, the
- * hand-added path still works, and a run still records its stages honestly.
+ * WHAT CHANGED. AdMirror now reads the public Ad Library ITSELF, using a real
+ * browser on its own server that clears Meta's bot check the same way a person's
+ * browser does. There is nothing to connect and nothing to buy, so there is no
+ * longer a broken state to warn about — which means this component renders
+ * NOTHING in the normal case, deliberately.
  *
- * It is a SERVER component and takes the state as a prop. The key itself never
- * comes near the browser; only the boolean does.
+ * It still has one true thing to say, and only when asked: with the optional
+ * read API connected, Meta's own published reach band comes through as well,
+ * which sharpens the ranking. That is an upgrade, not a fix, so it is never shown
+ * as a warning and never blocks anything.
+ *
+ * It is a SERVER component and takes the state as a prop. No key ever comes near
+ * the browser; only the boolean does.
  */
-import { PlugZap } from "lucide-react";
+import { Radio } from "lucide-react";
 
 export function ReaderStatus({
   connected,
   context = "start",
+  /**
+   * Off by default. The automatic reader works with nothing connected, so
+   * mentioning the optional upgrade on every screen would read as a problem.
+   */
+  showUpgrade = false,
 }: {
   connected: boolean;
-  /** Where the banner sits, which changes only the second sentence. */
   context?: "start" | "run";
+  showUpgrade?: boolean;
 }) {
-  if (connected) return null;
+  // The reader always works now. Silence is the correct output.
+  if (connected || !showUpgrade) return null;
 
   return (
-    <div className="flex min-w-0 items-start gap-3 border-l-2 border-lamp-alert/70 bg-lamp-alert/[0.07] px-3.5 py-3">
-      <PlugZap size={15} strokeWidth={1.6} className="mt-0.5 shrink-0 text-lamp-alert" />
+    <div className="flex min-w-0 items-start gap-3 border-l-2 border-border bg-card/40 px-3.5 py-3">
+      <Radio size={15} strokeWidth={1.6} className="mt-0.5 shrink-0 text-muted-foreground" />
       <div className="min-w-0">
         <p className="min-w-0 text-[13px] font-medium leading-relaxed text-foreground">
-          The ad reader isn&rsquo;t connected yet
+          Reading the Ad Library directly
         </p>
         <p className="mt-1 max-w-[65ch] text-[12.5px] leading-relaxed text-muted-foreground">
           {context === "start"
-            ? "Until it is, searches come back unread \u2014 so AdMirror will say so plainly instead of telling you nobody advertises in your market. There is a route that needs nothing connected: the Ad Library is public, so you open the search in your own browser, copy the page, and AdMirror reads the ads straight off it. Set the run up as normal and collect that way."
-            : "That is why nothing was read automatically. It is a missing connection, not an empty market \u2014 no result on this screen means your rivals have stopped advertising. Collect them yourself instead: open the search in your own browser and paste the page into \u201cBring in ads yourself\u201d below. Those ads rank exactly the same way."}
+            ? "AdMirror opens the public Ad Library itself and reads your rivals' live ads — copy, artwork and video included. Nothing to connect."
+            : "These ads were read straight from the public Ad Library. Meta publishes no spend or click figure for commercial ads, so none appears here — only what the page itself shows."}
         </p>
       </div>
     </div>
