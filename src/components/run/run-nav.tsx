@@ -1,17 +1,16 @@
-import { STEPS } from "@/lib/admirror/pipeline";
 import { StepItem } from "@/components/rack/step-item";
 import { StepRail } from "@/components/rack/shell";
+import { rollUp, STAGES, STAGE_FOR_STEP } from "@/lib/admirror/stages";
 import type { StepRow } from "@/lib/admirror/queries";
 
-const HREF_FOR: Partial<Record<string, string>> = {
-  EVIDENCE_INTAKE: "collect",
-  EVIDENCE_RANK: "board",
-  TEARDOWN: "board",
-  HUMAN_GATE: "board",
-  POST: "creative",
-  DELIVER: "deliver",
-};
-
+/**
+ * The rail shows the FIVE stages the user has, not the fifteen the engine runs.
+ *
+ * The engine's internal steps are all still recorded and all still visible on the
+ * timeline — this is a rollup for the person, not a reduction of the machine. A
+ * row here is somewhere they either act or look; anything they neither influence
+ * nor read was noise competing with the two rows that decide what they do next.
+ */
 export function RunNav({
   runId,
   steps,
@@ -23,6 +22,7 @@ export function RunNav({
 }) {
   const byName = new Map(steps.map((step) => [step.name, step]));
   const collected = byName.get("EVIDENCE_RANK")?.state === "done";
+  const activeStage = activeStep ? STAGE_FOR_STEP[activeStep] : undefined;
 
   return (
     <StepRail
@@ -32,22 +32,28 @@ export function RunNav({
         ) : null
       }
     >
-      {STEPS.map((def) => {
-        const row = byName.get(def.name);
-        const suffix = HREF_FOR[def.name];
+      {STAGES.map((stage) => {
+        const { state, detail } = rollUp(stage, byName);
+        // A stage is reachable once it has actually started — a link to a screen
+        // with nothing on it is worse than no link.
         const reachable =
-          suffix &&
-          (row?.state === "done" || row?.state === "blocked_on_user" || row?.state === "running");
+          state === "done" || state === "blocked_on_user" || state === "running";
         return (
           <StepItem
-            key={def.name}
-            n={def.n}
-            title={def.title}
-            detail={row?.detail ?? def.detail}
-            state={row?.state ?? "pending"}
-            actor={def.actor}
-            href={reachable ? `/runs/${runId}/${suffix}` : undefined}
-            active={activeStep === def.name}
+            key={stage.id}
+            n={stage.n}
+            title={stage.title}
+            detail={detail}
+            state={state}
+            actor={stage.actor}
+            href={
+              reachable
+                ? stage.href
+                  ? `/runs/${runId}/${stage.href}`
+                  : `/runs/${runId}`
+                : undefined
+            }
+            active={activeStage === stage.id}
           />
         );
       })}
@@ -56,8 +62,8 @@ export function RunNav({
 }
 
 /**
- * The watchtower sits BELOW the numbered pipeline, not inside it — it isn't a
- * step you finish, it's the thing that runs after every step is done and keeps
+ * The watchtower sits BELOW the numbered stages, not inside them — it isn't a
+ * stage you finish, it's the thing that runs after every stage is done and keeps
  * running as long as the market does.
  */
 function WatchLink({ runId, active }: { runId: string; active: boolean }) {

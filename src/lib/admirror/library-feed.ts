@@ -1,0 +1,463 @@
+import "server-only";
+
+/**
+ * The live Ad Library feed — where competitor ads ACTUALLY come from.
+ *
+ * READ THIS BEFORE CHANGING ANYTHING HERE.
+ *
+ * WHY THIS MODULE EXISTS. The previous collector read the public Ad Library page
+ * directly. It cannot work and never could: Meta answers every request from a
+ * datacentre with a bot challenge (HTTP 403 and a `__rd_verify` script), so the
+ * sweep read zero cards on every search and then reported, truthfully but
+ * uselessly, "nobody advertises under this term". A locked door looked exactly
+ * like an empty market. Everything downstream — the competitor map, the board,
+ * the ranking — was therefore correct arithmetic over nothing.
+ *
+ * WHAT CHANGED. The same public Ad Library data now arrives through a read API
+ * that holds a residential path to it. The facts are the same public facts a
+ * person sees on the Library page, plus ONE Meta genuinely does publish through
+ * its own API surface and the page does not print for commercial ads:
+ * `total_impressions`, a banded reach figure. Where it is present it is a REAL
+ * published figure, and it is labelled as one. Where it is absent it stays absent
+ * — there is still no invented number anywhere in this app.
+ *
+ * THE HONESTY LINE, RESTATED. A missing key, a failed request and an empty
+ * market are three different outcomes and must never be collapsed into one. Each
+ * comes back as its own `state` with its own plain-words note, and the UI prints
+ * that note verbatim.
+ */
+
+import { buildSearchUrl, type SearchSpec } from "./ad-library";
+
+const ENDPOINT = "https://api.scrapecreators.com/v1/facebook/adLibrary/search/ads";
+const COMPANY_ENDPOINT = "https://api.scrapecreators.com/v1/facebook/adLibrary/company/ads";
+const REQUEST_TIMEOUT_MS = 45_000;
+
+/** One live ad, as the Library publishes it. */
+export type LiveAd = {
+  /** Meta's own Library ID — the stable public identifier. */
+  libraryId: string;
+  libraryUrl: string;
+  advertiser: string;
+  pageId: string | null;
+  /** The visible "Started running" date, ISO, exactly as published. */
+  visibleStartDate: string | null;
+  headline: string;
+  bodyCopy: string;
+  ctaLabel: string;
+  displayLink: string | null;
+  /** active · inactive — as published. */
+  activeStatus: string;
+  /** Where it sat in the returned order. NOT a metric. */
+  resultRank: number;
+  /** facebook,instagram,… — the platforms Meta lists for this ad. */
+  platforms: string[];
+  /**
+   * REACH, AS META PUBLISHES IT. A lower bound of the impressions band when the
+   * Library carries one, null when it does not. Never estimated, never filled.
+   */
+  impressionsLower: number | null;
+  impressionsUpper: number | null;
+  /** How many creative variations this ad runs. 1 when unstated. */
+  variantCount: number;
+  creativeUrl: string | null;
+  advertiserAvatarUrl: string | null;
+  isVideo: boolean;
+  euTransparency: boolean;
+};
+
+export type FeedState = "ok" | "empty" | "no_key" | "failed" | "rate_limited";
+
+export type FeedOutcome = {
+  state: FeedState;
+  /** The public Library URL for this same search, so a human can check us. */
+  url: string;
+  ads: LiveAd[];
+  /** Plain words, printed verbatim in the UI. */
+  note: string;
+  /** The published total for the search, when the feed reports one. */
+  totalReported: number | null;
+  elapsedMs: number;
+};
+
+export function feedConfigured(): boolean {
+  return Boolean(process.env.SCRAPECREATORS_API_KEY);
+}
+
+/** The one sentence the UI shows when the key is missing. Never a fake empty. */
+export const NO_KEY_NOTE =
+  "The ad reader isn't connected yet, so no ads could be read. This is a missing connection, not an empty market.";
+
+type Unknown = Record<string, unknown>;
+
+function asRecord(value: unknown): Unknown | null {
+  return value && typeof value === "object" && !Array.isArray(value)
+    ? (value as Unknown)
+    : null;
+}
+
+function asArray(value: unknown): unknown[] {
+  return Array.isArray(value) ? value : [];
+}
+
+function str(value: unknown): string {
+  return typeof value === "string" ? value : "";
+}
+
+function num(value: unknown): number | null {
+  if (typeof value === "number" && Number.isFinite(value)) return value;
+  if (typeof value === "string" && value.trim() !== "" && Number.isFinite(Number(value))) {
+    return Number(value);
+  }
+  return null;
+}
+
+/** Meta's impressions band, e.g. {lower_bound:"1000", upper_bound:"5000"}. */
+function readImpressions(snapshot: Unknown | null, root: Unknown) {
+  const candidates = [
+    root.total_impressions,
+    root.impressions,
+    root.reach_estimate,
+    snapshot?.total_impressions,
+    snapshot?.impressions,
+  ];
+  for (const candidate of candidates) {
+    const flat = num(candidate);
+    if (flat !== null && flat > 0) return { lower: flat, upper: null as number | null };
+    const band = asRecord(candidate);
+    if (band) {
+      const lower = num(band.lower_bound) ?? num(band.lowerBound) ?? num(band.min);
+      const upper = num(band.upper_bound) ?? num(band.upperBound) ?? num(band.max);
+      if (lower !== null || upper !== null) return { lower, upper };
+    }
+  }
+  return { lower: null as number | null, upper: null as number | null };
+}
+
+function isoDate(value: unknown): string | null {
+  const asString = str(value);
+  if (asString) {
+    const parsed = new Date(asString);
+    if (!Number.isNaN(parsed.getTime())) return parsed.toISOString().slice(0, 10);
+  }
+  const seconds = num(value);
+  if (seconds !== null && seconds > 1_000_000_000) {
+    return new Date(seconds * 1000).toISOString().slice(0, 10);
+  }
+  return null;
+}
+
+/** Pick the card creative: the biggest still, or the video's poster frame. */
+function readCreative(snapshot: Unknown | null): { url: string | null; isVideo: boolean } {
+  if (!snapshot) return { url: null, isVideo: false };
+
+  const videos = asArray(snapshot.videos);
+  if (videos.length > 0) {
+    const first = asRecord(videos[0]);
+    const poster =
+      str(first?.video_preview_image_url) ||
+      str(first?.preview_image_url) ||
+      str(first?.thumbnail_url);
+    if (poster) return { url: poster, isVideo: true };
+  }
+
+  const images = [...asArray(snapshot.images), ...asArray(snapshot.extra_images)];
+  for (const entry of images) {
+    const record = asRecord(entry);
+    const url =
+      str(record?.resized_image_url) ||
+      str(record?.original_image_url) ||
+      (typeof entry === "string" ? entry : "");
+    if (url) return { url, isVideo: false };
+  }
+
+  const cards = asArray(snapshot.cards);
+  for (const entry of cards) {
+    const record = asRecord(entry);
+    const url =
+      str(record?.resized_image_url) ||
+      str(record?.original_image_url) ||
+      str(record?.video_preview_image_url);
+    if (url) return { url, isVideo: Boolean(str(record?.video_hd_url)) };
+  }
+
+  return { url: null, isVideo: false };
+}
+
+/** How many creative variations this one ad is running. */
+function readVariantCount(snapshot: Unknown | null, root: Unknown): number {
+  const stated =
+    num(root.collation_count) ??
+    num(root.total_ads) ??
+    num(snapshot?.collation_count);
+  if (stated !== null && stated >= 1) return Math.min(999, Math.round(stated));
+  const cards = asArray(snapshot?.cards).length;
+  const images = asArray(snapshot?.images).length;
+  return Math.max(1, cards || images || 1);
+}
+
+function readAd(raw: unknown, rank: number): LiveAd | null {
+  const root = asRecord(raw);
+  if (!root) return null;
+
+  const libraryId = str(root.ad_archive_id) || str(root.adArchiveID) || str(root.id);
+  if (!libraryId) return null;
+
+  const snapshot = asRecord(root.snapshot);
+  const advertiser =
+    str(root.page_name) ||
+    str(snapshot?.page_name) ||
+    str(snapshot?.current_page_name) ||
+    "";
+
+  const bodyRecord = asRecord(snapshot?.body);
+  const bodyCopy = (str(bodyRecord?.text) || str(snapshot?.body) || "").trim();
+  const headline = (str(snapshot?.title) || str(snapshot?.link_description) || "").trim();
+
+  const impressions = readImpressions(snapshot, root);
+  const creative = readCreative(snapshot);
+
+  const platforms = asArray(root.publisher_platform)
+    .map((entry) => str(entry).toLowerCase())
+    .filter(Boolean);
+
+  return {
+    libraryId,
+    libraryUrl: `https://www.facebook.com/ads/library/?id=${libraryId}`,
+    advertiser: advertiser.slice(0, 160),
+    pageId: str(root.page_id) || str(snapshot?.page_id) || null,
+    visibleStartDate: isoDate(root.start_date_string) ?? isoDate(root.start_date),
+    headline: headline.slice(0, 300),
+    bodyCopy: bodyCopy.slice(0, 1400),
+    ctaLabel: str(snapshot?.cta_text).slice(0, 60),
+    displayLink: str(snapshot?.caption) || null,
+    activeStatus: root.is_active === true ? "active" : root.is_active === false ? "inactive" : "unknown",
+    resultRank: rank,
+    platforms,
+    impressionsLower: impressions.lower,
+    impressionsUpper: impressions.upper,
+    variantCount: readVariantCount(snapshot, root),
+    creativeUrl: creative.url,
+    advertiserAvatarUrl: str(snapshot?.page_profile_picture_url) || null,
+    isVideo: creative.isVideo || str(snapshot?.display_format).toUpperCase() === "VIDEO",
+    euTransparency: Boolean(str(snapshot?.disclaimer_label)),
+  };
+}
+
+async function request(url: string): Promise<{ ok: boolean; status: number; body: unknown }> {
+  const key = process.env.SCRAPECREATORS_API_KEY ?? "";
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
+  try {
+    const response = await fetch(url, {
+      method: "GET",
+      cache: "no-store",
+      signal: controller.signal,
+      headers: { "x-api-key": key, Accept: "application/json" },
+    });
+    const text = await response.text();
+    let body: unknown = null;
+    try {
+      body = JSON.parse(text);
+    } catch {
+      body = null;
+    }
+    return { ok: response.ok, status: response.status, body };
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+function outcomeFrom(
+  body: unknown,
+  publicUrl: string,
+  limit: number,
+  started: number,
+  subjectNote: string,
+): FeedOutcome {
+  const root = asRecord(body) ?? {};
+  const results = [
+    ...asArray(root.searchResults),
+    ...asArray(root.results),
+    ...asArray(root.ads),
+    ...asArray(root.data),
+  ];
+
+  const ads: LiveAd[] = [];
+  results.forEach((raw, index) => {
+    if (ads.length >= limit) return;
+    const ad = readAd(raw, index + 1);
+    if (ad) ads.push(ad);
+  });
+
+  const totalReported = num(root.searchResultsCount) ?? num(root.count);
+
+  if (ads.length === 0) {
+    return {
+      state: "empty",
+      url: publicUrl,
+      ads: [],
+      note: `No live ads are running ${subjectNote} in this country right now.`,
+      totalReported,
+      elapsedMs: Date.now() - started,
+    };
+  }
+
+  const withReach = ads.filter((ad) => ad.impressionsLower !== null).length;
+  const withArt = ads.filter((ad) => ad.creativeUrl).length;
+
+  return {
+    state: "ok",
+    url: publicUrl,
+    ads,
+    note: `${ads.length} live ad${ads.length === 1 ? "" : "s"} read ${subjectNote}${
+      withArt > 0 ? `, ${withArt} with artwork` : ""
+    }${withReach > 0 ? `, ${withReach} with published reach` : ""}`,
+    totalReported,
+    elapsedMs: Date.now() - started,
+  };
+}
+
+function failure(
+  publicUrl: string,
+  status: number,
+  started: number,
+): FeedOutcome {
+  const rateLimited = status === 429;
+  return {
+    state: rateLimited ? "rate_limited" : "failed",
+    url: publicUrl,
+    ads: [],
+    note: rateLimited
+      ? "The ad reader hit its rate limit on this search, so it was left unread — not an empty market."
+      : status === 401 || status === 403
+        ? "The ad reader rejected our credentials, so nothing could be read. This is a connection problem, not an empty market."
+        : "This search couldn't be read just now. It was left unread rather than reported as empty.",
+    totalReported: null,
+    elapsedMs: Date.now() - started,
+  };
+}
+
+/**
+ * Read ONE keyword search of the live Library. Never throws — a failure is a
+ * state with a note, because one bad search must not take a run down.
+ */
+export async function readSearch(
+  spec: SearchSpec,
+  options: { limit?: number; sortBy?: "total_impressions" | "relevancy_monthly_grouped" } = {},
+): Promise<FeedOutcome> {
+  const publicUrl = buildSearchUrl(spec);
+  const started = Date.now();
+  const limit = options.limit ?? 12;
+
+  if (!feedConfigured()) {
+    return {
+      state: "no_key",
+      url: publicUrl,
+      ads: [],
+      note: NO_KEY_NOTE,
+      totalReported: null,
+      elapsedMs: 0,
+    };
+  }
+
+  const params = new URLSearchParams({
+    query: spec.competitorName,
+    // Impressions-first ordering is the whole point: it surfaces the ads that
+    // are actually working, rather than whatever the Library happens to list.
+    sort_by: options.sortBy ?? "total_impressions",
+    search_type: "keyword_unordered",
+    ad_type: "all",
+    status: spec.activeStatus === "all" ? "ALL" : "ACTIVE",
+  });
+  if (spec.country) params.set("country", spec.country);
+  if (spec.language && spec.language !== "any") {
+    params.set("language", spec.language.toUpperCase());
+  }
+  if (spec.mediaType && spec.mediaType !== "all") params.set("media_type", spec.mediaType);
+
+  try {
+    const { ok, status, body } = await request(`${ENDPOINT}?${params.toString()}`);
+    if (!ok) return failure(publicUrl, status, started);
+    return outcomeFrom(body, publicUrl, limit, started, `under “${spec.competitorName}”`);
+  } catch {
+    return failure(publicUrl, 0, started);
+  }
+}
+
+/**
+ * Read every live ad for ONE named advertiser. This is the call that answers
+ * "show me my competitor's ads" directly, rather than hoping a keyword search
+ * happens to surface them.
+ */
+export async function readCompanyAds(
+  input: { companyName: string; pageId?: string | null; country: string; language: string; includeInactive?: boolean },
+  options: { limit?: number } = {},
+): Promise<FeedOutcome> {
+  const publicUrl = buildSearchUrl({
+    competitorName: input.companyName,
+    country: input.country,
+    language: input.language,
+    mediaType: "all",
+    activeStatus: input.includeInactive ? "all" : "active",
+  });
+  const started = Date.now();
+  const limit = options.limit ?? 12;
+
+  if (!feedConfigured()) {
+    return {
+      state: "no_key",
+      url: publicUrl,
+      ads: [],
+      note: NO_KEY_NOTE,
+      totalReported: null,
+      elapsedMs: 0,
+    };
+  }
+
+  const params = new URLSearchParams({
+    status: input.includeInactive ? "ALL" : "ACTIVE",
+  });
+  if (input.pageId) params.set("pageId", input.pageId);
+  else params.set("companyName", input.companyName);
+  if (input.country) params.set("country", input.country);
+  if (input.language && input.language !== "any") {
+    params.set("language", input.language.toUpperCase());
+  }
+
+  try {
+    const { ok, status, body } = await request(`${COMPANY_ENDPOINT}?${params.toString()}`);
+    if (!ok) return failure(publicUrl, status, started);
+    return outcomeFrom(body, publicUrl, limit, started, `for ${input.companyName}`);
+  } catch {
+    return failure(publicUrl, 0, started);
+  }
+}
+
+/** Read several searches, a few lanes at a time. */
+export async function readMany(
+  specs: SearchSpec[],
+  options: {
+    concurrency?: number;
+    limit?: number;
+    onSettled?: (index: number, outcome: FeedOutcome) => void | Promise<void>;
+  } = {},
+): Promise<FeedOutcome[]> {
+  const lanes = Math.max(1, Math.min(options.concurrency ?? 4, 6));
+  const results: FeedOutcome[] = new Array(specs.length);
+  let cursor = 0;
+
+  async function lane() {
+    for (;;) {
+      const index = cursor;
+      cursor += 1;
+      if (index >= specs.length) return;
+      const outcome = await readSearch(specs[index], { limit: options.limit });
+      results[index] = outcome;
+      if (options.onSettled) await options.onSettled(index, outcome);
+    }
+  }
+
+  await Promise.all(Array.from({ length: Math.min(lanes, specs.length) }, lane));
+  return results;
+}

@@ -25,6 +25,7 @@ import type { Teardown } from "@/lib/admirror/pipeline";
 import type { EvidenceRow, ScoreRow } from "@/lib/admirror/queries";
 
 const COMPONENT_LABEL: Record<EbosComponent, string> = {
+  published_reach: "Reach Meta published",
   duration_visible: "How long it's been visible",
   variant_repetition: "Repeated as variants",
   evidenced_rank: "Where it appeared in your capture",

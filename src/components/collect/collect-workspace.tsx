@@ -78,7 +78,7 @@ export function CollectWorkspace({
             <p className="mt-0.5 min-w-0 text-[11.5px] leading-relaxed text-muted-foreground">
               {sweptCount > 0 ? (
                 <>
-                  <EdgeCode>{sweptCount}</EdgeCode> read off the public Ad Library
+                  <EdgeCode>{sweptCount}</EdgeCode> live ads collected
                   {items.length > sweptCount ? ` · ${items.length - sweptCount} added by you` : ""}
                   {withArt > 0 ? ` · ${withArt} with artwork` : ""}
                 </>

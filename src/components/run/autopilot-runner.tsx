@@ -26,8 +26,8 @@ type Phase = "idle" | "discovering" | "collecting" | "done" | "failed";
 
 const PHASE_COPY: Record<Phase, string> = {
   idle: "Ready to collect",
-  discovering: "Searching the Ad Library for who advertises in your market…",
-  collecting: "Reading their live ads and ranking them…",
+  discovering: "Finding who advertises in your market…",
+  collecting: "Collecting their live ads and ranking them…",
   done: "Collection finished",
   failed: "Collection stopped",
 };

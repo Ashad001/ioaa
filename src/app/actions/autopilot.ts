@@ -44,7 +44,7 @@ import {
   computeEbos,
   type ScoreItem,
 } from "@/lib/admirror/scoring";
-import { sweepMany, type SweptAd } from "@/lib/admirror/sweep";
+import { readMany, type FeedOutcome, type LiveAd } from "@/lib/admirror/library-feed";
 import { recordSnapshot } from "@/lib/admirror/watch-record";
 import {
   advanceProgress,
@@ -84,9 +84,9 @@ async function setStep(runId: string, name: string, state: string, detail?: stri
  * these numbers are what keep a full collection inside a couple of minutes
  * rather than a crawl the user abandons: 6 searches over 3 lanes is two rounds.
  */
-const MAX_SEARCHES = 6;
-const ADS_PER_SEARCH = 12;
-const SWEEP_LANES = 3;
+const MAX_SEARCHES = 10;
+const ADS_PER_SEARCH = 16;
+const SWEEP_LANES = 4;
 
 /**
  * Step 1 — start a run from nothing but a website.
@@ -317,14 +317,28 @@ export async function autoResearch(runId: string): Promise<ActionResult> {
       // A dossier we cannot parse is not worth failing a run over.
     }
 
+    // AN UNREADABLE DISCOVERY IS NOT AN EMPTY MARKET. When nothing could be
+    // read at all, the run says so in those words and stops for the user rather
+    // than presenting "0 advertisers" as a finding about their market.
+    if (discovery.unreadable) {
+      await setProgressPhase(runId, "done", "the ad reader couldn't be reached");
+      await setStep(runId, "COMPETITOR_MAP", "blocked_on_user", discovery.note);
+      await db
+        .update(run)
+        .set({ status: "COMPETITOR_MAP", stepCursor: "3", updatedAt: new Date() })
+        .where(eq(run.id, runId));
+      revalidatePath(`/runs/${runId}`);
+      return { ok: false, error: discovery.note };
+    }
+
     await setProgressPhase(runId, "done", `${rows.length} advertisers found`);
     await setStep(
       runId,
       "COMPETITOR_MAP",
       "done",
       discovery.blockedTerms.length > 0
-        ? `${rows.length} advertisers found · ${discovery.blockedTerms.length} search${discovery.blockedTerms.length === 1 ? "" : "es"} needs you`
-        : `${rows.length} advertisers found running ads in ${primaryCountry}`,
+        ? `${rows.length} advertisers found · ${discovery.blockedTerms.length} search${discovery.blockedTerms.length === 1 ? "" : "es"} couldn't be read`
+        : `${rows.length} advertisers found running live ads in ${primaryCountry}`,
     );
 
     // ── Step 4: the search plan the sweep will run, one per competitor.
@@ -473,7 +487,7 @@ export async function autoCollect(runId: string): Promise<ActionResult> {
       slice[0]?.competitorName ?? "",
     );
 
-    const outcomes = await sweepMany(specs, {
+    const outcomes = await readMany(specs, {
       concurrency: SWEEP_LANES,
       limit: ADS_PER_SEARCH,
       // Every count on screen is counted from a page that actually came back.
@@ -484,13 +498,7 @@ export async function autoCollect(runId: string): Promise<ActionResult> {
           {
             label: search.competitorName,
             ads: outcome.ads.length,
-            state: outcome.blocked
-              ? "blocked"
-              : !outcome.ok
-                ? "failed"
-                : outcome.ads.length === 0
-                  ? "empty"
-                  : "ok",
+            state: lampFor(outcome),
             // "New" is settled properly below, against the whole board; here it
             // is only what this page contributed, which is what a live count is.
             newAds: outcome.ads.length,
@@ -548,11 +556,11 @@ export async function autoCollect(runId: string): Promise<ActionResult> {
         );
       }
 
-      if (outcome.ok) {
+      if (outcome.state === "ok" || outcome.state === "empty") {
         readOk += 1;
         adsSeen += outcome.ads.length;
       }
-      if (!outcome.ok || outcome.ads.length === 0) {
+      if (outcome.ads.length === 0) {
         gaps.push(`${search.competitorName} — ${outcome.note}`);
       }
 
@@ -566,13 +574,7 @@ export async function autoCollect(runId: string): Promise<ActionResult> {
           outcome.ads.length > 0 && newFromThis === 0
             ? `${outcome.ads.length} ads read — all already on your board.`
             : outcome.note,
-        lastSweepState: outcome.blocked
-          ? "blocked"
-          : !outcome.ok
-            ? "failed"
-            : outcome.ads.length === 0
-              ? "empty"
-              : "ok",
+        lastSweepState: lampFor(outcome),
       });
     });
 
@@ -604,11 +606,17 @@ export async function autoCollect(runId: string): Promise<ActionResult> {
     // and reporting that as a failure (the old behaviour) told users their
     // working app was broken every time they re-swept an unchanged market.
     if (readOk === 0) {
+      // WHY nothing was read decides what we can honestly say. A missing
+      // connection is our problem and must be named as such; anything else is
+      // reported as unread, never as an empty market.
+      const noKey = outcomes.some((outcome) => outcome.state === "no_key");
       await setStep(
         runId,
         "EVIDENCE_INTAKE",
         "blocked_on_user",
-        "Nothing could be read automatically — adding by hand is open to you",
+        noKey
+          ? "The ad reader isn't connected yet, so no ads could be read"
+          : "Nothing could be read this time — adding by hand is open to you",
       );
       await db
         .update(run)
@@ -619,8 +627,9 @@ export async function autoCollect(runId: string): Promise<ActionResult> {
       revalidatePath(`/runs/${runId}/collect`);
       return {
         ok: false,
-        error:
-          "No ads could be read from the Library this time. The searches are saved — open any of them and add what you see.",
+        error: noKey
+          ? "The ad reader isn't connected yet, so no ads could be read. This is a missing connection, not an empty market."
+          : "No ads could be read this time. The searches are saved — open any of them and add what you see.",
       };
     }
 
@@ -687,9 +696,17 @@ export async function autoCollect(runId: string): Promise<ActionResult> {
   }
 }
 
-/** Map one swept card onto an evidence row, provenance included. */
+/** The lamp for one read: ok · empty · blocked · failed. Never guessed. */
+function lampFor(outcome: FeedOutcome): string {
+  if (outcome.state === "ok") return "ok";
+  if (outcome.state === "empty") return "empty";
+  if (outcome.state === "no_key" || outcome.state === "rate_limited") return "blocked";
+  return "failed";
+}
+
+/** Map one live ad onto an evidence row, provenance included. */
 function sweptToEvidence(
-  ad: SweptAd,
+  ad: LiveAd,
   context: {
     runId: string;
     batchId: string;
@@ -721,10 +738,8 @@ function sweptToEvidence(
     bodyCopyProvenance: ad.bodyCopy ? swept : "unknown",
     ctaLabel: ad.ctaLabel,
     ctaProvenance: ad.ctaLabel ? swept : "unknown",
-    // The public card shows platform ICONS we do not read as text, so this stays
-    // uncaptured rather than becoming a guess.
-    platforms: "",
-    platformsProvenance: "unknown",
+    platforms: ad.platforms.join(","),
+    platformsProvenance: ad.platforms.length > 0 ? swept : "unknown",
     activeStatus: ad.activeStatus,
     activeStatusProvenance: ad.activeStatus === "unknown" ? "unknown" : swept,
     visibleStartDate: ad.visibleStartDate,
@@ -737,11 +752,16 @@ function sweptToEvidence(
     creativeUrl: ad.creativeUrl,
     advertiserAvatarUrl: ad.advertiserAvatarUrl,
     isVideo: ad.isVideo,
+    // Reach, only where Meta publishes one. Absent stays absent.
+    impressionsLower: ad.impressionsLower === null ? null : String(ad.impressionsLower),
+    impressionsUpper: ad.impressionsUpper === null ? null : String(ad.impressionsUpper),
+    impressionsProvenance: ad.impressionsLower === null ? "unknown" : "published_by_meta",
+    adVariantCount: String(ad.variantCount),
     market: context.market,
     language: context.language,
     observedAt: context.observedAt,
     notes: [
-      ad.multipleVersions ? "The Library says this ad has multiple versions." : "",
+      ad.variantCount > 1 ? `Running ${ad.variantCount} creative versions.` : "",
       ad.euTransparency ? "Carries an EU transparency notice." : "",
       ad.displayLink ? `Display link: ${ad.displayLink}` : "",
     ]
@@ -821,7 +841,13 @@ async function analyse(runId: string, batchId: string, userId: string) {
     visibleStartDate: item.visibleStartDate,
     visibleResultRank: item.visibleResultRank ? Number(item.visibleResultRank) : null,
     platformCount: item.platforms ? item.platforms.split(",").filter(Boolean).length : null,
-    variantCount: variantCounts.get(item.conceptKey || item.id) ?? 1,
+    // Meta's own version count for this one ad, floored at how many copies of
+    // the concept we collected — whichever is the stronger evidence of effort.
+    variantCount: Math.max(
+      Number(item.adVariantCount) || 1,
+      variantCounts.get(item.conceptKey || item.id) ?? 1,
+    ),
+    publishedReach: item.impressionsLower ? Number(item.impressionsLower) || null : null,
     observedAt: item.observedAt,
     hasCreativeArtefact: Boolean(item.artefactUrl),
     hasLibraryUrl: Boolean(item.libraryUrl),

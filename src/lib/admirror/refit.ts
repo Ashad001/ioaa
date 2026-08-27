@@ -60,14 +60,16 @@ export const REFIT_NEVER_AUTO_RULE =
  * other fails the check instead of quietly ranking on two different weightings.
  */
 export const DEFAULT_WEIGHTS: EbosWeights = {
-  duration_visible: 0.3,
-  variant_repetition: 0.25,
-  evidenced_rank: 0.2,
-  recency: 0.15,
+  published_reach: 0.28,
+  duration_visible: 0.22,
+  variant_repetition: 0.18,
+  evidenced_rank: 0.12,
+  recency: 0.1,
   platform_breadth: 0.1,
 };
 
 export const COMPONENT_ORDER: EbosComponent[] = [
+  "published_reach",
   "duration_visible",
   "variant_repetition",
   "evidenced_rank",
@@ -76,6 +78,7 @@ export const COMPONENT_ORDER: EbosComponent[] = [
 ];
 
 export const COMPONENT_LABEL: Record<EbosComponent, string> = {
+  published_reach: "How many people Meta says it reached",
   duration_visible: "How long it has been running",
   variant_repetition: "How many variants exist",
   evidenced_rank: "Where it sat in the results",

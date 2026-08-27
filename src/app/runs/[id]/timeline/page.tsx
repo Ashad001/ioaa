@@ -17,6 +17,8 @@ import {
   getSteps,
 } from "@/lib/admirror/queries";
 import { explainConditionGap, type DeclaredFilters } from "@/lib/admirror/watchtower";
+import { STEPS } from "@/lib/admirror/pipeline";
+import { Lamp } from "@/components/rack/plate";
 
 export default async function TimelinePage({
   params,
@@ -210,6 +212,54 @@ export default async function TimelinePage({
               ))}
             </div>
           )}
+
+          {/*
+            THE ENGINE LOG. The rail beside this page shows the five stages the
+            user has; this is where the fifteen internal steps still live, in
+            full, for anyone who wants to see exactly what ran. Removing them
+            from the rail was about attention, not about hiding the machine.
+          */}
+          <details className="group mt-6 border-t border-border/70 pt-4">
+            <summary className="cursor-pointer list-none text-[12.5px] text-muted-foreground transition-colors duration-150 ease-out hover:text-foreground">
+              Every step this run took ({steps.length})
+            </summary>
+            <ul className="mt-3 divide-y divide-border/50 rounded-sm border border-border">
+              {STEPS.map((def) => {
+                const row = steps.find((entry) => entry.name === def.name);
+                const state = row?.state ?? "pending";
+                return (
+                  <li key={def.name} className="flex min-w-0 items-start gap-2.5 px-3 py-2">
+                    <span className="mt-[6px] shrink-0">
+                      <Lamp
+                        state={
+                          state === "done"
+                            ? "done"
+                            : state === "failed"
+                              ? "alert"
+                              : state === "pending"
+                                ? "cold"
+                                : "hold"
+                        }
+                      />
+                    </span>
+                    <span className="min-w-0 flex-1">
+                      <span className="flex min-w-0 items-baseline gap-2">
+                        <span className="min-w-0 truncate text-[12.5px] text-foreground">
+                          {def.title}
+                        </span>
+                        <span className="tabular shrink-0 text-[10px] text-rack-seam">
+                          {String(def.n).padStart(2, "0")}
+                        </span>
+                      </span>
+                      <span className="mt-0.5 block truncate text-[11px] text-muted-foreground">
+                        {row?.detail || def.detail}
+                      </span>
+                    </span>
+                  </li>
+                );
+              })}
+            </ul>
+          </details>
         </div>
       </div>
     </RackShell>

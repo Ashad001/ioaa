@@ -72,9 +72,10 @@ export function OwnRow({ runId, ads }: { runId: string; ads: OwnRowData[] }) {
       <div className="min-w-0 px-4 py-4">
         <p className="max-w-[74ch] text-[12.5px] leading-relaxed text-muted-foreground">
           Your own ads carry real numbers, because you have them. The competitor cards below
-          carry an opportunity score derived from what was collected — the public Ad Library
-          publishes no performance figure for them. AdMirror never puts those two on one
-          scale, so there is no ring on this row and no cost per result on theirs.
+          carry an opportunity score built from what Meta does publish — reach where it exists,
+          plus how long and how widely each ad runs. Meta publishes no spend or cost per result
+          for them, so AdMirror never puts those two on one scale: no ring on this row, no cost
+          per result on theirs.
         </p>
 
         {adding ? <AddForm runId={runId} onDone={() => setAdding(false)} /> : null}

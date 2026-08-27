@@ -212,11 +212,12 @@ export function IntakeForm() {
               <ScanSearch size={15} strokeWidth={1.6} className="mt-0.5 shrink-0 text-film-edge" />
               <p className="min-w-0 text-[12.5px] leading-relaxed text-foreground/85">
                 Collection runs on its own — about forty seconds per search. It reads only what the
-                public Ad Library shows anyone: the copy, the call to action, the artwork and the date
-                each ad started running.{" "}
+                public Ad Library shows anyone: the copy, the call to action, the artwork, the date
+                each ad started running, and the reach range Meta publishes on some of them.{" "}
                 <span className="text-muted-foreground">
-                  Meta publishes no spend, reach or click figures for these ads, so AdMirror never
-                  shows one.
+                  Meta publishes no spend, click or conversion figures for these ads, so AdMirror
+                  never shows one — and where it publishes no reach either, the ad says so rather
+                  than showing a zero.
                 </span>
               </p>
             </div>

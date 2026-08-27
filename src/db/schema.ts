@@ -350,6 +350,22 @@ export const evidenceItem = pgTable(
     /** True when the card's creative was a video rather than a still. */
     isVideo: boolean("is_video").notNull().default(false),
 
+    /**
+     * REACH, AS META PUBLISHES IT — and only when it does.
+     *
+     * Meta prints no impressions on an ordinary commercial ad card, but its own
+     * Library data does carry a banded reach figure for some ads. Where one
+     * exists it is stored here verbatim, with provenance `published_by_meta`,
+     * and it is the ONLY numeric claim in this app about how much an ad is being
+     * seen. Where none exists both columns stay null and every surface says
+     * "not published" — never a zero, never an estimate.
+     */
+    impressionsLower: text("impressions_lower"),
+    impressionsUpper: text("impressions_upper"),
+    impressionsProvenance: text("impressions_provenance").notNull().default("unknown"),
+    /** How many creative variations Meta says this one ad runs. */
+    adVariantCount: text("ad_variant_count").notNull().default("1"),
+
     /** Model reading of the ad's structure, JSON text. */
     teardown: text("teardown"),
     /** Concept cluster key — repeated angles group under one card. */

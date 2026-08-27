@@ -364,7 +364,11 @@ export async function closeBatch(input: { runId: string; batchId: string }): Pro
       visibleStartDate: item.visibleStartDate,
       visibleResultRank: item.visibleResultRank ? Number(item.visibleResultRank) : null,
       platformCount: item.platforms ? item.platforms.split(",").filter(Boolean).length : null,
-      variantCount: variantCounts.get(item.conceptKey || item.id) ?? 1,
+      variantCount: Math.max(
+        Number(item.adVariantCount) || 1,
+        variantCounts.get(item.conceptKey || item.id) ?? 1,
+      ),
+      publishedReach: item.impressionsLower ? Number(item.impressionsLower) || null : null,
       observedAt: item.observedAt,
       hasCreativeArtefact: Boolean(item.artefactUrl),
       hasLibraryUrl: Boolean(item.libraryUrl),

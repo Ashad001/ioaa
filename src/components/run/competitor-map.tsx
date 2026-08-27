@@ -3,10 +3,14 @@
 /**
  * S2 — the competitor map, as a strip of film chips on the light box.
  *
- * Every row here came back from a real sweep of the public Ad Library: the
- * advertiser was seen running ads in this country under a word the brand's own
- * site uses, and it then passed the market test. That makes the "why" a piece of
- * evidence rather than a rationale.
+ * Every row here came back from a real read of the Meta Ad Library: the
+ * advertiser was seen running LIVE ads in this country under a word the brand's
+ * own site uses, and it then passed the market test. That makes the "why" a piece
+ * of evidence rather than a rationale.
+ *
+ * The download control on each row is the DIRECT ask — "show me this company's
+ * ads" — because a keyword sweep can miss a named rival whose copy never happens
+ * to use the word we searched under.
  *
  * The SET ASIDE list is the visible proof of the filter. A filter the user cannot
  * inspect is indistinguishable from a bug, and "why isn't X here?" is the first
@@ -14,11 +18,12 @@
  */
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
-import { ChevronDown, Plus, RefreshCw, RotateCcw, Trash2 } from "lucide-react";
+import { ChevronDown, Download, Plus, RefreshCw, RotateCcw, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 
 import { addCompetitor, renameCompetitor, toggleCompetitor } from "@/app/actions/runs";
 import { autoCollect } from "@/app/actions/autopilot";
+import { collectCompetitorAds } from "@/app/actions/competitor-ads";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -27,6 +32,8 @@ import {
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
 import { EdgeCode, Plate, Rebate } from "@/components/rack/plate";
+import { ProvenanceBadge } from "@/components/rack/metric";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import type { CompetitorRow } from "@/lib/admirror/queries";
 import { cn } from "@/lib/utils";
 
@@ -38,23 +45,42 @@ const TIER_LABEL: Record<string, string> = {
 
 export type SetAsideRow = { name: string; reason: string };
 
+/**
+ * What Meta published about ONE advertiser's ads.
+ *
+ * `short` is null when Meta published nothing for any of their ads, and that is
+ * a real state with its own sentence — never a 0 and never an empty chip. A
+ * reader who sees a zero concludes the ads are failing; the truth is that Meta
+ * simply doesn't say.
+ */
+export type AdvertiserReach = {
+  short: string | null;
+  full: string | null;
+  withFigure: number;
+  total: number;
+};
+
 export function CompetitorMap({
   runId,
   competitors,
   hasEvidence,
   setAside = [],
   adsByAdvertiser = {},
+  reachByAdvertiser = {},
 }: {
   runId: string;
   competitors: CompetitorRow[];
   hasEvidence: boolean;
   setAside?: SetAsideRow[];
   adsByAdvertiser?: Record<string, number>;
+  reachByAdvertiser?: Record<string, AdvertiserReach>;
 }) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
   const [newName, setNewName] = useState("");
   const [drafts, setDrafts] = useState<Record<string, string>>({});
+  /** Which single advertiser is being looked up right now, if any. */
+  const [fetching, setFetching] = useState<string | null>(null);
 
   const kept = competitors.filter((row) => !row.pruned);
 
@@ -73,19 +99,24 @@ export function CompetitorMap({
   if (competitors.length === 0) {
     return (
       <p className="max-w-[65ch] text-[13.5px] leading-relaxed text-muted-foreground">
-        Nobody has been found yet. As soon as the Ad Library searches come back, whoever is actually
+        Nobody has been found yet. As soon as the searches come back, whoever is actually
         running ads in your market appears here — with the category word that found them.
       </p>
     );
   }
 
   const adCount = (name: string) => adsByAdvertiser[name.trim().toLowerCase()] ?? 0;
+  const reachOf = (name: string): AdvertiserReach | null =>
+    reachByAdvertiser[name.trim().toLowerCase()] ?? null;
 
   return (
     <div className="space-y-6">
       <p className="max-w-[65ch] text-[13.5px] leading-relaxed text-muted-foreground">
         Everyone here was seen running live ads in your market under your own category words — not
         guessed from your industry. The line under each name is the evidence that put them here.
+        Where Meta publishes how many people an ad reached, that range is shown on the row exactly
+        as Meta gave it. Use the download arrow on any row to pull that advertiser&rsquo;s live ads
+        directly.
       </p>
 
       {tiers.map((tier) => {
@@ -130,6 +161,36 @@ export function CompetitorMap({
                       <EdgeCode className="shrink-0">
                         {adCount(row.name)} {adCount(row.name) === 1 ? "ad" : "ads"}
                       </EdgeCode>
+                      {/* THE DIRECT ASK. The keyword sweep can miss a named
+                          rival whose copy never uses our search word, so this
+                          asks the Library for THIS advertiser's ads by name. */}
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="size-8 shrink-0"
+                        disabled={row.pruned || fetching !== null}
+                        aria-label={`Collect ${row.name}'s live ads`}
+                        title={`Collect ${row.name}'s live ads`}
+                        onClick={() =>
+                          startTransition(async () => {
+                            setFetching(row.id);
+                            const result = await collectCompetitorAds({
+                              runId,
+                              competitorId: row.id,
+                            });
+                            setFetching(null);
+                            if (!result.ok) toast.error(result.error);
+                            else toast.success(result.note);
+                            router.refresh();
+                          })
+                        }
+                      >
+                        <Download
+                          size={14}
+                          strokeWidth={1.6}
+                          className={cn(fetching === row.id && "animate-pulse")}
+                        />
+                      </Button>
                       <Button
                         variant="ghost"
                         size="icon"
@@ -158,6 +219,43 @@ export function CompetitorMap({
                     <p className="mt-1 px-1.5 text-[12px] leading-relaxed text-muted-foreground">
                       {row.whyUseful}
                     </p>
+
+                    {/* REACH — Meta's figure or Meta's silence, never a zero. */}
+                    {adCount(row.name) > 0
+                      ? (() => {
+                          const reach = reachOf(row.name);
+                          if (!reach) return null;
+                          if (!reach.short) {
+                            return (
+                              <p className="mt-1.5 min-w-0 px-1.5 text-[11.5px] leading-relaxed text-muted-foreground">
+                                Meta publishes no reach figure for their ads, so none is shown here.
+                              </p>
+                            );
+                          }
+                          return (
+                            <div className="mt-1.5 flex min-w-0 items-center gap-2 px-1.5">
+                              <Tooltip>
+                                <TooltipTrigger
+                                  render={<span />}
+                                  className="tabular min-w-0 truncate text-[12px] text-foreground/90"
+                                >
+                                  {reach.short} reached
+                                </TooltipTrigger>
+                                <TooltipContent className="max-w-64">
+                                  <p className="text-xs">{reach.full}</p>
+                                </TooltipContent>
+                              </Tooltip>
+                              <ProvenanceBadge
+                                provenance="published_by_meta"
+                                detail={`Their widest published range, out of ${reach.withFigure} of ${reach.total} ads that carry one.`}
+                              />
+                              <span className="min-w-0 truncate text-[11px] text-muted-foreground">
+                                {reach.withFigure} of {reach.total} ads carry a figure
+                              </span>
+                            </div>
+                          );
+                        })()
+                      : null}
 
                     <div className="mt-2.5 flex min-w-0 items-center gap-2 px-1.5">
                       <Plate className="shrink-0">Evidence</Plate>

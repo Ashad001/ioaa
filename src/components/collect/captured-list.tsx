@@ -24,6 +24,7 @@ import { AdRender } from "@/components/rack/ad-render";
 import { EdgeCode, Lamp, Plate, Rebate } from "@/components/rack/plate";
 import { Button } from "@/components/ui/button";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
+import { readReach } from "@/lib/admirror/reach";
 import { PLATFORM_LABELS } from "@/lib/admirror/ad-library";
 import type { EvidenceRow } from "@/lib/admirror/queries";
 import { cn } from "@/lib/utils";
@@ -67,9 +68,8 @@ export function CapturedList({ runId, items }: { runId: string; items: EvidenceR
       <div className="px-4 py-8">
         <Plate className="block">The sheet is blank</Plate>
         <p className="mt-2 max-w-[54ch] text-[13px] leading-relaxed text-muted-foreground">
-          Nothing has come back off the public Ad Library for this market yet. Sweep again, or
-          add an ad you spotted yourself — both land on the same sheet and are scored the same
-          way.
+          No live ads have come back for this market yet. Collect again, or add an ad you
+          spotted yourself — both land on the same sheet and are scored the same way.
         </p>
       </div>
     );
@@ -199,6 +199,22 @@ export function CapturedList({ runId, items }: { runId: string; items: EvidenceR
                   <dt className="plate shrink-0 text-rack-engrave">Library ID</dt>
                   <dd className="min-w-0 truncate">
                     {id ? <EdgeCode>{id}</EdgeCode> : <span className="text-[11px] text-muted-foreground">not read</span>}
+                  </dd>
+                </div>
+                {/* Reach, as Meta publishes it. An ad without one says so
+                    outright — a blank would read as zero, which is a claim we
+                    have no basis to make. */}
+                <div className="flex min-w-0 items-baseline justify-between gap-2">
+                  <dt className="plate shrink-0 text-rack-engrave">Reached</dt>
+                  <dd className="min-w-0 truncate text-[11.5px] text-foreground/85">
+                    {(() => {
+                      const reach = readReach(item.impressionsLower, item.impressionsUpper);
+                      return reach.published ? (
+                        <span className="tabular font-medium text-foreground">{reach.short}</span>
+                      ) : (
+                        <span className="text-muted-foreground">not published</span>
+                      );
+                    })()}
                   </dd>
                 </div>
                 <div className="flex min-w-0 items-baseline justify-between gap-2">

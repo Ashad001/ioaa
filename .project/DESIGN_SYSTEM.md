@@ -74,3 +74,16 @@ token NAMES; change values there only.
   saturated colour on a board.
 - Don't add a second `:root` block, don't use raw hex in components, don't run
   `shadcn init`, don't use `next/font/google`.
+
+## Provenance badges — one new, and it is the only lit one
+Every fact on screen carries a provenance badge (see `src/lib/admirror/provenance.ts`).
+They are all outlined or muted, deliberately, so nothing shouts — with ONE exception:
+- **`published_by_meta` (META)** is the only FILLED badge (`bg-primary text-primary-foreground`).
+  It marks the reach figure Meta itself publishes, which is the strongest claim the app
+  makes, so it is the one fact allowed to look lit.
+- Reach renders as Meta's own BAND ("10K–50K"), never narrowed to a single number. An ad
+  with no published figure renders the words "reach not published" in muted text —
+  NEVER a zero, never a blank, because a reader who sees 0 concludes the ad is failing.
+- On a competitor row the same rule holds at advertiser level: the largest published band
+  plus "N of M ads carry a figure", or one muted sentence saying Meta publishes none.
+  Bands are never added together — a summed range is a figure nobody published.

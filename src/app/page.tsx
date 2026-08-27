@@ -24,10 +24,10 @@ export default async function HomePage() {
                 your ad.
               </h1>
               <p className="mt-4 max-w-[56ch] text-[14.5px] leading-relaxed text-muted-foreground">
-                Give us your website. AdMirror finds who&rsquo;s advertising against you, collects
-                their live ads from the public Meta Ad Library with the artwork attached, lays them
-                out as a sheet you can read at a glance, and turns the angle you circle into three
-                ads of your own.
+                Give us your website. AdMirror finds who&rsquo;s advertising against you,
+                collects their live ads out of the Meta Ad Library with the artwork attached,
+                puts the hardest-working ones first, and turns the angle you circle into
+                three ads of your own.
               </p>
 
               {/* The empty sheet, as the thing being offered. */}
@@ -49,8 +49,9 @@ export default async function HomePage() {
                   ))}
                 </div>
                 <p className="mt-2.5 max-w-[52ch] text-[11.5px] leading-relaxed text-muted-foreground">
-                  No spend, reach or click figures anywhere — Meta doesn&rsquo;t publish them for
-                  these ads, so AdMirror never shows one.
+                  Where Meta publishes an ad&rsquo;s reach, you see it — exactly as Meta
+                  states it. Where it doesn&rsquo;t, the card says so. No spend, click or
+                  sales figures anywhere: Meta publishes none, so AdMirror shows none.
                 </p>
               </div>
             </div>

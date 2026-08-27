@@ -14,6 +14,13 @@ export type ScoreItem = {
   visibleResultRank: number | null;
   platformCount: number | null;
   variantCount: number;
+  /**
+   * REACH AS META PUBLISHES IT, or null. This is the only figure in the app that
+   * speaks to how much an ad is actually being seen, and it is used ONLY when
+   * Meta published one. Null drops the component and renormalises — it never
+   * scores as a zero, because "not published" is not "not working".
+   */
+  publishedReach: number | null;
   observedAt: Date;
   hasCreativeArtefact: boolean;
   hasLibraryUrl: boolean;
@@ -21,10 +28,17 @@ export type ScoreItem = {
 };
 
 export const EBOS_WEIGHTS = {
-  duration_visible: 0.3,
-  variant_repetition: 0.25,
-  evidenced_rank: 0.2,
-  recency: 0.15,
+  /**
+   * Reach carries the most weight, because it is the one component backed by a
+   * figure Meta itself published rather than a proxy for effort. It is present
+   * only on ads that carry one, and absent on the rest — which is exactly why
+   * the drop-and-renormalise rule below matters more now, not less.
+   */
+  published_reach: 0.28,
+  duration_visible: 0.22,
+  variant_repetition: 0.18,
+  evidenced_rank: 0.12,
+  recency: 0.1,
   platform_breadth: 0.1,
 } as const;
 
@@ -81,9 +95,14 @@ export function batchReferences(items: ScoreItem[], now: Date) {
     .filter((d): d is Date => d !== null)
     .map((d) => daysBetween(d, now));
   const repetitions = items.map((item) => Math.max(1, item.variantCount));
+  const reaches = items
+    .map((item) => item.publishedReach)
+    .filter((value): value is number => value !== null && value > 0);
   return {
     durationP95: percentile(durations, 0.95),
     repetitionP95: percentile(repetitions, 0.95),
+    reachP95: percentile(reaches, 0.95),
+    reachCount: reaches.length,
     batchSize: items.length,
   };
 }
@@ -97,6 +116,15 @@ export function computeEbos(
   const components: Partial<Record<EbosComponent, number>> = {};
   const dropped: EbosComponent[] = [];
   const notes: string[] = [];
+
+  if (item.publishedReach !== null && item.publishedReach > 0) {
+    components.published_reach = normalisedLog(item.publishedReach, refs.reachP95);
+  } else {
+    dropped.push("published_reach");
+    notes.push(
+      "Meta publishes no reach figure for this ad, so reach was dropped from the score rather than counted as zero.",
+    );
+  }
 
   const start = parseVisibleDate(item.visibleStartDate);
   if (start) {
@@ -170,6 +198,7 @@ export function computeCoverage(
   const withUrl = items.filter((item) => item.hasLibraryUrl).length;
   const withCreative = items.filter((item) => item.hasCreativeArtefact).length;
   const withStart = items.filter((item) => item.visibleStartDate).length;
+  const withReach = items.filter((item) => item.publishedReach !== null).length;
 
   const represented = new Set(
     items.map((item) => item.advertiser.trim().toLowerCase()).filter(Boolean),
@@ -204,6 +233,11 @@ export function computeCoverage(
       detail: `${withStart} of ${count} show a visible start date`,
     },
     {
+      label: "Published reach",
+      value: ratio(withReach, count),
+      detail: `${withReach} of ${count} carry a reach figure Meta published`,
+    },
+    {
       label: "Competitors",
       value: ratio(plannedHit, plannedClean.length),
       detail: `${plannedHit} of ${plannedClean.length} planned competitors represented`,
@@ -232,6 +266,11 @@ export function computeCoverage(
   if (count > 0 && withStart < count) {
     gaps.push(`${count - withStart} of ${count} items have no visible start date.`);
   }
+  if (count > 0 && withReach < count) {
+    gaps.push(
+      `${count - withReach} of ${count} have no reach figure — Meta doesn't publish one for every ad, so those are ranked on the rest.`,
+    );
+  }
   if (count > 0 && withCreative < count) {
     gaps.push(`${count - withCreative} of ${count} have no image — attaching a screenshot adds a lot.`);
   }
@@ -245,5 +284,10 @@ export const BAND_COPY: Record<CoverageResult["band"], string> = {
   substantial: "Substantial — a broad slice. Never a complete inventory.",
 };
 
-/** Never "the market's best ads". This is the only allowed superlative. */
-export const RANK_CAPTION = "Highest opportunity score in this collected evidence set";
+/**
+ * Never "the market's best ads" — we hold a slice, not an inventory, and the only
+ * performance figure that exists is the reach Meta publishes on some ads. This is
+ * the only allowed superlative.
+ */
+export const RANK_CAPTION =
+  "Working hardest in this collected set — reach where Meta publishes it, plus how long and how widely each ad runs";

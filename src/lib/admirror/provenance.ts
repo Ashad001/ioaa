@@ -10,6 +10,7 @@
 
 export const PROVENANCE_KINDS = [
   "observed_in_user_evidence",
+  "published_by_meta",
   "swept_from_public_library",
   "user_asserted",
   "derived_from_evidence",
@@ -39,11 +40,17 @@ export const PROVENANCE_META: Record<
     label: "Observed in your evidence",
     explain: "Your submitted artefact shows this.",
   },
+  published_by_meta: {
+    short: "META",
+    label: "Published by Meta",
+    explain:
+      "Meta itself publishes this figure in its Ad Library. It is the only number in AdMirror about how much an ad is being seen, it is reproduced exactly as published, and it is shown ONLY on the ads that carry one — never estimated, never filled in for the rest.",
+  },
   swept_from_public_library: {
     short: "LIB",
     label: "Read from the public Ad Library",
     explain:
-      "AdMirror opened the public Ad Library search itself and read this off the page on the date shown. Nobody typed it — and no performance figure exists in it, because Meta does not publish one.",
+      "AdMirror read this out of the public Ad Library on the date shown. Nobody typed it. Meta publishes no spend, click or conversion figure for commercial ads, so none appears here — only the reach it does publish, on the ads that carry one.",
   },
   user_asserted: {
     short: "YOU",

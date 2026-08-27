@@ -17,7 +17,7 @@ import "server-only";
  */
 
 import { MARKET_PRESETS, type SearchSpec } from "./ad-library";
-import { sweepMany, type SweptAd } from "./sweep";
+import { readMany, type FeedState, type LiveAd } from "./library-feed";
 import { judge, marketVocabulary, type Candidate, type Verdict } from "./relevance";
 
 const FETCH_TIMEOUT_MS = 15_000;
@@ -479,9 +479,15 @@ export type DiscoveredAdvertiser = {
 export type DiscoveryReport = {
   advertisers: DiscoveredAdvertiser[];
   termsSwept: string[];
-  /** Ads seen during discovery, kept so nothing is swept twice. */
-  seenAds: SweptAd[];
+  /** Ads seen during discovery, kept so nothing is read twice. */
+  seenAds: LiveAd[];
   blockedTerms: string[];
+  /**
+   * True when NOT ONE search could be read — a missing connection or a failing
+   * reader. This is the difference between "your market has no advertisers" and
+   * "we could not look", and it must never be reported as the former.
+   */
+  unreadable: boolean;
   /**
    * Candidates the market test REJECTED, with the reason. Kept and shown,
    * because a filter the user cannot inspect is indistinguishable from a bug.
@@ -522,6 +528,7 @@ export async function discoverAdvertisers(input: {
       termsSwept: [],
       seenAds: [],
       blockedTerms: [],
+      unreadable: false,
       rejected: [],
       note: "There were no category words to search under, so nobody was discovered automatically.",
     };
@@ -535,9 +542,9 @@ export async function discoverAdvertisers(input: {
     activeStatus: "active",
   }));
 
-  const outcomes = await sweepMany(specs, {
-    concurrency: 3,
-    limit: 30,
+  const outcomes = await readMany(specs, {
+    concurrency: 4,
+    limit: 40,
     onSettled: async (index, outcome) => {
       if (input.onTermSettled) {
         await input.onTermSettled(terms[index], outcome.ads.length, index);
@@ -549,20 +556,25 @@ export async function discoverAdvertisers(input: {
     string,
     {
       name: string;
+      pageId: string | null;
       adCount: number;
       terms: Set<string>;
       bestRank: number;
+      reachTotal: number;
+      reachCount: number;
       copy: string[];
       displayLinks: Set<string>;
     }
   >();
-  const seenAds: SweptAd[] = [];
+  const seenAds: LiveAd[] = [];
   const blockedTerms: string[] = [];
+  const states: FeedState[] = [];
 
   outcomes.forEach((outcome, index) => {
     const term = terms[index];
-    if (!outcome.ok || outcome.blocked) {
-      if (outcome.blocked) blockedTerms.push(term);
+    states.push(outcome.state);
+    if (outcome.state !== "ok") {
+      if (outcome.state !== "empty") blockedTerms.push(term);
       return;
     }
     for (const ad of outcome.ads) {
@@ -577,19 +589,45 @@ export async function discoverAdvertisers(input: {
         existing.terms.add(term);
         existing.bestRank = Math.min(existing.bestRank, ad.resultRank);
         existing.copy.push(adCopy);
+        if (ad.impressionsLower !== null) {
+          existing.reachTotal += ad.impressionsLower;
+          existing.reachCount += 1;
+        }
         if (ad.displayLink) existing.displayLinks.add(ad.displayLink);
+        if (!existing.pageId && ad.pageId) existing.pageId = ad.pageId;
       } else {
         byAdvertiser.set(key, {
           name,
+          pageId: ad.pageId,
           adCount: 1,
           terms: new Set([term]),
           bestRank: ad.resultRank,
+          reachTotal: ad.impressionsLower ?? 0,
+          reachCount: ad.impressionsLower !== null ? 1 : 0,
           copy: [adCopy],
           displayLinks: new Set(ad.displayLink ? [ad.displayLink] : []),
         });
       }
     }
   });
+
+  // NOT ONE search could be read. Say exactly that, and never dress it up as an
+  // empty market — that conflation is the bug this flag exists to prevent.
+  const unreadable =
+    states.length > 0 && states.every((state) => state !== "ok" && state !== "empty");
+  if (unreadable) {
+    return {
+      advertisers: [],
+      termsSwept: terms,
+      seenAds: [],
+      blockedTerms,
+      unreadable: true,
+      rejected: [],
+      note:
+        outcomes.find((outcome) => outcome.state === "no_key")?.note ??
+        "None of the category searches could be read, so no advertisers were found. This is a reading problem, not an empty market.",
+    };
+  }
 
   // ── THE MARKET TEST ────────────────────────────────────────────────────────
   // The Library's keyword search is loose on purpose, so being returned by it is
@@ -623,8 +661,17 @@ export async function discoverAdvertisers(input: {
     else rejected.push(verdict);
   }
 
+  const reachFor = (name: string) => {
+    const entry = byAdvertiser.get(name.toLowerCase());
+    return entry && entry.reachCount > 0 ? entry.reachTotal : 0;
+  };
+
   const ranked = kept
     .sort((a, b) => {
+      // Published reach first when it exists — an advertiser whose ads are
+      // actually being seen matters more than one who merely matched a word.
+      const byReach = reachFor(b.entry.name) - reachFor(a.entry.name);
+      if (byReach !== 0) return byReach;
       const byScore = b.verdict.score - a.verdict.score;
       if (byScore !== 0) return byScore;
       const spread = b.entry.terms.length - a.entry.terms.length;
@@ -671,10 +718,11 @@ export async function discoverAdvertisers(input: {
     termsSwept: terms,
     seenAds,
     blockedTerms,
+    unreadable: false,
     rejected: rejected.sort((a, b) => b.score - a.score).slice(0, 12),
     note:
       found > 0
-        ? `${found} advertiser${found === 1 ? "" : "s"} found running ads in ${input.country} that speak your market's language${
+        ? `${found} advertiser${found === 1 ? "" : "s"} found running live ads in ${input.country} that speak your market's language${
             rejected.length > 0
               ? ` · ${rejected.length} keyword match${rejected.length === 1 ? "" : "es"} set aside as out-of-market`
               : ""

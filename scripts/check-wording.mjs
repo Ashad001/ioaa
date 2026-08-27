@@ -1,10 +1,19 @@
 /**
  * The blocking honesty check (`10 §3.1`).
  *
- * The public Ad Library does not publish per-ad impressions, spend, CTR, ROAS or
- * conversions for ordinary commercial ads. So if one of those words appears in a
- * user-facing string about a competitor's ad, the interface is claiming to know
- * something it cannot know. This grep is cheap and it blocks.
+ * The Ad Library does not publish per-ad spend, CTR, ROAS or conversions for
+ * ordinary commercial ads. So if one of those words appears in a user-facing
+ * string about a competitor's ad, the interface is claiming to know something it
+ * cannot know. This grep is cheap and it blocks.
+ *
+ * ONE FIGURE IS REAL, AND IT IS THE EXCEPTION THAT PROVES THE RULE: Meta itself
+ * publishes a BANDED reach figure for some Library ads. So "impressions" is no
+ * longer banned outright — it is the name of a real published field, and banning
+ * a field name would only force it to be spelled around. What stays banned is
+ * the CLAIM: a spend or cost figure, a rate we cannot compute, and — critically —
+ * any phrasing that turns Meta's band into a single precise number, or presents
+ * a reach figure as performance. Reach says how many people saw an ad. It does
+ * not say the ad worked.
  *
  * Run it with `npm run check:wording`.
  */
@@ -16,7 +25,6 @@ const FORBIDDEN = [
   "top performing",
   "best-performing",
   "top-performing",
-  "impressions",
   "roas",
   "ctr",
   "conversion rate",
@@ -34,6 +42,14 @@ const FORBIDDEN = [
   "went dark",
   "doubling down",
   "no longer running",
+  // Reach is not performance, and a band is not a point. These phrasings would
+  // turn the one honest figure we have into a claim Meta never made.
+  "exact impressions",
+  "precise reach",
+  "impressions per day",
+  "cost per impression",
+  "best reach",
+  "highest performing",
 ];
 
 /**
@@ -572,6 +588,7 @@ requireThat(
 requireThat(
   weightsSum(
     normaliseWeights({
+      published_reach: 0.0001,
       duration_visible: 9,
       variant_repetition: 0.0001,
       evidenced_rank: 0.0001,

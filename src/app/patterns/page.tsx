@@ -116,8 +116,8 @@ export default async function PatternsPage() {
                       <span aria-hidden className="mt-1.5 size-1 shrink-0 rounded-full bg-primary" />
                       <span className="min-w-0">
                         A cell counts your ads only. Nothing a competitor ran is in here —
-                        there are no performance figures published for those ads to
-                        aggregate.
+                        Meta publishes no cost or conversion figures for their ads, so there
+                        is nothing comparable to aggregate.
                       </span>
                     </li>
                     <li className="flex min-w-0 gap-2">

@@ -35,6 +35,7 @@ import {
   type MatrixChoice,
 } from "@/lib/admirror/matrix";
 import { asProvenance } from "@/lib/admirror/provenance";
+import { readReach } from "@/lib/admirror/reach";
 import { StatusChip } from "@/components/watch/status-strip";
 import type { AdStatusState, MatchRule } from "@/lib/admirror/watchtower";
 import { RANK_CAPTION, type CoverageResult } from "@/lib/admirror/scoring";
@@ -233,6 +234,29 @@ export function EvidenceBoard({
                                     className="shrink-0 text-film-edge"
                                   />
                                 ) : null}
+                              </div>
+                              {/* REACH. Meta's own published figure where it
+                                  exists; an explicit "not published" where it
+                                  doesn't. Never a zero standing in for silence. */}
+                              <div className="mt-1.5 min-w-0">
+                                {(() => {
+                                  const reach = readReach(
+                                    item.impressionsLower,
+                                    item.impressionsUpper,
+                                  );
+                                  return reach.published ? (
+                                    <MetricChip
+                                      provenance="published_by_meta"
+                                      detail={reach.full}
+                                    >
+                                      {reach.short} reached
+                                    </MetricChip>
+                                  ) : (
+                                    <span className="block truncate text-[11px] text-muted-foreground/70">
+                                      Reach not published
+                                    </span>
+                                  );
+                                })()}
                               </div>
                               {platforms.length > 0 ? (
                                 <div className="mt-1.5 min-w-0">
