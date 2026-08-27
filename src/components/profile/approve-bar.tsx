@@ -39,7 +39,7 @@ export function ApproveBar({
         toast.error(result.error);
         return;
       }
-      toast.success("List reopened. Collection stays paused until you approve it again.");
+      toast.success("List reopened. Nothing is read until you approve it again.");
       router.refresh();
     });
   };
@@ -54,7 +54,7 @@ export function ApproveBar({
         </p>
         <p className="mt-0.5 text-[11.5px] leading-relaxed text-muted-foreground">
           {approved
-            ? "Reopen the list to make changes. New collection remains paused until the list is approved again."
+            ? "Reopen the list to make changes. Nothing new is read until the list is approved again."
             : "Nothing is read until you approve this list."}
         </p>
       </div>

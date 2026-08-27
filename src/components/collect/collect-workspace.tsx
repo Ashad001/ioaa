@@ -27,6 +27,7 @@ import { CaptureComposer } from "@/components/collect/capture-composer";
 import { CapturedList } from "@/components/collect/captured-list";
 import { ReaderStatus } from "@/components/run/reader-status";
 import { SavedSearches } from "@/components/collect/saved-searches";
+import { UnreadSearches } from "@/components/collect/unread-searches";
 import { CoverageMeter } from "@/components/rack/coverage";
 import { EdgeCode, Plate } from "@/components/rack/plate";
 import { FetchTicker } from "@/components/run/fetch-ticker";
@@ -128,7 +129,11 @@ export function CollectWorkspace({
           <div className="border-b border-border px-4 py-3">
             <FetchTicker runId={run.id} active={sweeping} />
           </div>
-        ) : null}
+        ) : (
+          /* A search we couldn't reach and a rival with no ads are opposite
+             facts, so they are never shown as one. */
+          <UnreadSearches runId={run.id} searches={searches} />
+        )}
 
         <div className="flex min-h-0 flex-1 flex-col overflow-y-auto">
           <CapturedList runId={run.id} items={items} />

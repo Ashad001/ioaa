@@ -439,7 +439,18 @@ export async function autoResearch(runId: string): Promise<ActionResult> {
  * Steps 5–8, unattended: sweep every planned search, file what comes back as
  * evidence, dedupe, score and tear down. Ends at the human gate.
  */
-export async function autoCollect(runId: string): Promise<ActionResult> {
+export async function autoCollect(
+  runId: string,
+  options: {
+    /**
+     * "unread" reads ONLY the searches the reader could not reach last time.
+     * A blocked read is the one gap that re-reading actually fixes, and making
+     * the user re-sweep an entire market to retry two searches spends their
+     * quota on questions that were already answered.
+     */
+    only?: "all" | "unread";
+  } = {},
+): Promise<ActionResult> {
   try {
     const user = await requireUser();
     const current = await ownedRun(runId, user.id);
@@ -494,7 +505,21 @@ export async function autoCollect(runId: string): Promise<ActionResult> {
       return aTime - bTime;
     });
 
-    const slice = ordered.slice(0, MAX_SEARCHES);
+    const unreadOnly = options.only === "unread";
+    const candidates = unreadOnly
+      ? ordered.filter(
+          (row) => row.lastSweepState === "blocked" || row.lastSweepState === "failed",
+        )
+      : ordered;
+
+    if (candidates.length === 0) {
+      await setStep(runId, "EVIDENCE_INTAKE", "done", "Every search has been read");
+      return unreadOnly
+        ? { ok: false, error: "Every search has already been read — there's nothing left to retry." }
+        : { ok: false, error: "There are no searches to collect from yet." };
+    }
+
+    const slice = candidates.slice(0, MAX_SEARCHES);
     const specs: SearchSpec[] = slice.map((row) => ({
       competitorName: row.competitorName,
       country: row.country,
@@ -515,6 +540,10 @@ export async function autoCollect(runId: string): Promise<ActionResult> {
     const outcomes = await readMany(specs, {
       concurrency: SWEEP_LANES,
       limit: ADS_PER_SEARCH,
+      // A keyword net that misses a named rival must not be the final word: when
+      // a search settles empty, ask for that advertiser by name before recording
+      // the market as quiet. This is the single biggest source of false empties.
+      advertiserFallback: true,
       // Every count on screen is counted from a page that actually came back.
       onSettled: async (index, outcome) => {
         const search = slice[index];
@@ -548,6 +577,8 @@ export async function autoCollect(runId: string): Promise<ActionResult> {
     const observedAt = new Date();
     const inserts: (typeof evidenceItem.$inferInsert)[] = [];
     const gaps: string[] = [];
+    /** Searches the reader could not reach at all — reported separately. */
+    const unread: string[] = [];
     const sweepRecords: Array<{
       id: string;
       lastSweptAt: Date;
@@ -584,8 +615,13 @@ export async function autoCollect(runId: string): Promise<ActionResult> {
       if (outcome.state === "ok" || outcome.state === "empty") {
         readOk += 1;
         adsSeen += outcome.ads.length;
+      } else {
+        // UNREAD IS NOT EMPTY. A search the reader could not reach tells us
+        // nothing about that rival, and folding it in with the genuinely quiet
+        // ones is how "we couldn't look" gets reported as "nobody advertises".
+        unread.push(`${search.competitorName} — ${outcome.note}`);
       }
-      if (outcome.ads.length === 0) {
+      if (outcome.state === "empty") {
         gaps.push(`${search.competitorName} — ${outcome.note}`);
       }
 
@@ -597,7 +633,9 @@ export async function autoCollect(runId: string): Promise<ActionResult> {
         lastSweepCount: String(outcome.ads.length),
         lastSweepNote:
           outcome.ads.length > 0 && newFromThis === 0
-            ? `${outcome.ads.length} ads read — all already on your board.`
+            ? `${outcome.ads.length} ads read — all already on your board.${
+                outcome.route === "advertiser" ? " Found by name, not by keyword." : ""
+              }`
             : outcome.note,
         lastSweepState: lampFor(outcome),
       });
@@ -698,13 +736,24 @@ export async function autoCollect(runId: string): Promise<ActionResult> {
       return { ok: true };
     }
 
+    // The note has to carry all three facts, because they mean different
+    // things: what we collected, which rivals are genuinely quiet, and which
+    // ones we simply could not reach and should sweep again.
     await setStep(
       runId,
       "EVIDENCE_INTAKE",
       "done",
-      gaps.length > 0
-        ? `${collected} ads collected · ${gaps.length} search${gaps.length === 1 ? "" : "es"} came back empty`
-        : `${collected} ads collected from ${slice.length} searches`,
+      [
+        `${collected} ads collected from ${slice.length - unread.length} of ${slice.length} searches`,
+        gaps.length > 0
+          ? `${gaps.length} rival${gaps.length === 1 ? "" : "s"} running nothing live`
+          : "",
+        unread.length > 0
+          ? `${unread.length} search${unread.length === 1 ? "" : "es"} left unread — sweep again`
+          : "",
+      ]
+        .filter(Boolean)
+        .join(" · "),
     );
 
     await setProgressPhase(runId, "scoring", `${collected} ads collected`);
@@ -952,6 +1001,36 @@ export async function runAutopilot(runId: string): Promise<ActionResult> {
   const research = await autoResearch(runId);
   if (!research.ok) return research;
   return autoCollect(runId);
+}
+
+/**
+ * RETRY ONLY WHAT COULDN'T BE READ. Files into the collection that is already
+ * open rather than starting a new one, because these ads belong to the sweep
+ * that failed to reach them, not to a fresh look at the market.
+ */
+export async function sweepUnread(runId: string): Promise<ActionResult> {
+  try {
+    const user = await requireUser();
+    const current = await ownedRun(runId, user.id);
+
+    const [open] = await db
+      .select()
+      .from(evidenceBatch)
+      .where(and(eq(evidenceBatch.runId, runId), eq(evidenceBatch.state, "open")))
+      .limit(1);
+
+    if (!open) {
+      await db.insert(evidenceBatch).values({
+        runId,
+        label: `Unread retry — ${current.marketLabel}`,
+        state: "open",
+      });
+    }
+
+    return autoCollect(runId, { only: "unread" });
+  } catch (error) {
+    return fail(error);
+  }
 }
 
 /** Re-sweep the same searches later — the revisit flow, also unattended. */

@@ -100,9 +100,21 @@ export function SavedSearches({
                 </p>
               ) : (
                 <p className="mt-1.5 text-[11.5px] leading-relaxed text-muted-foreground">
-                  Not swept yet — the next collection will read this one.
+                  Not read yet — the next collection will read this one.
                 </p>
               )}
+
+              {/* Says WHY there is nothing here, in the two cases that look
+                  identical on a board and mean opposite things. */}
+              {row.lastSweepState === "blocked" || row.lastSweepState === "failed" ? (
+                <p className="mt-1 text-[11px] leading-relaxed text-lamp-alert">
+                  Left unread — we don&rsquo;t know whether they&rsquo;re advertising.
+                </p>
+              ) : row.lastSweepState === "empty" ? (
+                <p className="mt-1 text-[11px] leading-relaxed text-muted-foreground">
+                  Checked by keyword and by name — nothing live here.
+                </p>
+              ) : null}
 
               <div className="mt-2.5 flex flex-wrap items-center gap-2">
                 <Button size="sm" variant="secondary" className="shrink-0" render={<a href={row.url} target="_blank" rel="noopener noreferrer" />}><span className="min-w-0 truncate">Open in Ad Library</span>

@@ -32,6 +32,15 @@ import { buildSearchUrl, type SearchSpec } from "./ad-library";
 const ENDPOINT = "https://api.scrapecreators.com/v1/facebook/adLibrary/search/ads";
 const COMPANY_ENDPOINT = "https://api.scrapecreators.com/v1/facebook/adLibrary/company/ads";
 const REQUEST_TIMEOUT_MS = 45_000;
+/**
+ * A TRANSIENT FAILURE IS NOT AN ANSWER. A timeout, a 429 or a 5xx says nothing
+ * about the market — it says the pipe wobbled. Recording one as a finished read
+ * is how a live market ends up written down as quiet. So each read gets a small
+ * number of patient retries with widening gaps, and only a settled result is
+ * ever written down.
+ */
+const MAX_ATTEMPTS = 3;
+const RETRY_BASE_MS = 900;
 
 /** One live ad, as the Library publishes it. */
 export type LiveAd = {
@@ -78,6 +87,15 @@ export type FeedOutcome = {
   /** The published total for the search, when the feed reports one. */
   totalReported: number | null;
   elapsedMs: number;
+  /** How many requests this outcome cost. 1 unless a wobble forced a retry. */
+  attempts?: number;
+  /**
+   * WHICH QUESTION ANSWERED IT. `keyword` = "who advertises about X".
+   * `advertiser` = "show me THIS company's ads", which is what the fallback asks
+   * when the keyword net comes back empty. A keyword hit and a named-company hit
+   * mean different things about a market, so the route is never guessed.
+   */
+  route?: "keyword" | "advertiser";
 };
 
 export function feedConfigured(): boolean {
@@ -322,21 +340,64 @@ function failure(
   publicUrl: string,
   status: number,
   started: number,
+  attempts = 1,
 ): FeedOutcome {
   const rateLimited = status === 429;
+  const tried = attempts > 1 ? ` Tried ${attempts} times.` : "";
   return {
     state: rateLimited ? "rate_limited" : "failed",
     url: publicUrl,
     ads: [],
     note: rateLimited
-      ? "The ad reader hit its rate limit on this search, so it was left unread — not an empty market."
+      ? `The ad reader hit its rate limit on this search, so it was left unread — not an empty market.${tried}`
       : status === 401 || status === 403
         ? "The ad reader rejected our credentials, so nothing could be read. This is a connection problem, not an empty market."
-        : "This search couldn't be read just now. It was left unread rather than reported as empty.",
+        : `This search couldn't be read just now. It was left unread rather than reported as empty.${tried}`,
     totalReported: null,
     elapsedMs: Date.now() - started,
+    attempts,
   };
 }
+
+/** Worth trying again? Only the failures that carry no information. */
+function retryable(status: number): boolean {
+  // 0 = the request never completed (timeout / network). 429 = asked to slow
+  // down. 5xx = their side. A 401/403/404 is settled and retrying it just burns
+  // the user's quota to reach the same answer.
+  return status === 0 || status === 429 || status >= 500;
+}
+
+function pause(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+/**
+ * One read, retried while the failure is uninformative. Returns the LAST status
+ * so the caller can name the outcome precisely.
+ */
+async function requestWithRetry(
+  url: string,
+): Promise<{ ok: boolean; status: number; body: unknown; attempts: number }> {
+  let last = { ok: false, status: 0, body: null as unknown };
+
+  for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt += 1) {
+    try {
+      last = await request(url);
+    } catch {
+      last = { ok: false, status: 0, body: null };
+    }
+
+    if (last.ok) return { ...last, attempts: attempt };
+    if (!retryable(last.status)) return { ...last, attempts: attempt };
+    if (attempt < MAX_ATTEMPTS) {
+      // Widening gaps: a rate limit wants room, and hammering it earns another.
+      await pause(RETRY_BASE_MS * attempt * (last.status === 429 ? 2 : 1));
+    }
+  }
+
+  return { ...last, attempts: MAX_ATTEMPTS };
+}
+
 
 /**
  * Read ONE keyword search of the live Library. Never throws — a failure is a
@@ -377,11 +438,16 @@ export async function readSearch(
   if (spec.mediaType && spec.mediaType !== "all") params.set("media_type", spec.mediaType);
 
   try {
-    const { ok, status, body } = await request(`${ENDPOINT}?${params.toString()}`);
-    if (!ok) return failure(publicUrl, status, started);
-    return outcomeFrom(body, publicUrl, limit, started, `under “${spec.competitorName}”`);
+    const { ok, status, body, attempts } = await requestWithRetry(
+      `${ENDPOINT}?${params.toString()}`,
+    );
+    if (!ok) return failure(publicUrl, status, started, attempts);
+    return {
+      ...outcomeFrom(body, publicUrl, limit, started, `under “${spec.competitorName}”`),
+      attempts,
+    };
   } catch {
-    return failure(publicUrl, 0, started);
+    return failure(publicUrl, 0, started, MAX_ATTEMPTS);
   }
 }
 
@@ -426,11 +492,16 @@ export async function readCompanyAds(
   }
 
   try {
-    const { ok, status, body } = await request(`${COMPANY_ENDPOINT}?${params.toString()}`);
-    if (!ok) return failure(publicUrl, status, started);
-    return outcomeFrom(body, publicUrl, limit, started, `for ${input.companyName}`);
+    const { ok, status, body, attempts } = await requestWithRetry(
+      `${COMPANY_ENDPOINT}?${params.toString()}`,
+    );
+    if (!ok) return failure(publicUrl, status, started, attempts);
+    return {
+      ...outcomeFrom(body, publicUrl, limit, started, `for ${input.companyName}`),
+      attempts,
+    };
   } catch {
-    return failure(publicUrl, 0, started);
+    return failure(publicUrl, 0, started, MAX_ATTEMPTS);
   }
 }
 
@@ -440,6 +511,8 @@ export async function readMany(
   options: {
     concurrency?: number;
     limit?: number;
+    /** Ask for the advertiser by name when the keyword search comes back empty. */
+    advertiserFallback?: boolean;
     onSettled?: (index: number, outcome: FeedOutcome) => void | Promise<void>;
   } = {},
 ): Promise<FeedOutcome[]> {
@@ -452,7 +525,9 @@ export async function readMany(
       const index = cursor;
       cursor += 1;
       if (index >= specs.length) return;
-      const outcome = await readSearch(specs[index], { limit: options.limit });
+      const outcome = options.advertiserFallback
+        ? await readSearchOrAdvertiser(specs[index], { limit: options.limit })
+        : await readSearch(specs[index], { limit: options.limit });
       results[index] = outcome;
       if (options.onSettled) await options.onSettled(index, outcome);
     }
@@ -460,4 +535,62 @@ export async function readMany(
 
   await Promise.all(Array.from({ length: Math.min(lanes, specs.length) }, lane));
   return results;
+}
+
+/**
+ * ASK THE KEYWORD QUESTION, THEN THE DIRECT ONE.
+ *
+ * WHY THIS EXISTS. A keyword search is a loose net. A named rival can be
+ * running ads right now and still not come back, simply because their copy never
+ * uses the term we searched — and the sweep then recorded, truthfully but
+ * uselessly, "no live ads under this term". The user reads that as "my
+ * competitor isn't advertising", which is a different and false statement.
+ *
+ * So when the keyword read settles EMPTY, we ask the question the user actually
+ * meant: show me this advertiser's live ads. Only an empty keyword read triggers
+ * it — a failed or rate-limited read is unresolved, and a second question does
+ * not resolve the first one. The route that answered is carried on the outcome
+ * so nothing on screen has to guess.
+ */
+export async function readSearchOrAdvertiser(
+  spec: SearchSpec,
+  options: { limit?: number } = {},
+): Promise<FeedOutcome> {
+  const keyword = await readSearch(spec, options);
+  if (keyword.state !== "empty") return { ...keyword, route: "keyword" };
+
+  const direct = await readCompanyAds(
+    {
+      companyName: spec.competitorName,
+      country: spec.country,
+      language: spec.language,
+      includeInactive: spec.activeStatus === "all",
+    },
+    options,
+  );
+
+  if (direct.state === "ok" && direct.ads.length > 0) {
+    return {
+      ...direct,
+      url: keyword.url,
+      route: "advertiser",
+      note: `${direct.ads.length} live ad${
+        direct.ads.length === 1 ? "" : "s"
+      } found by looking ${spec.competitorName} up directly — the keyword search alone missed them.`,
+      attempts: (keyword.attempts ?? 1) + (direct.attempts ?? 1),
+    };
+  }
+
+  // The direct lookup didn't resolve it either. Keep the keyword outcome as the
+  // record — but say that both questions were asked, so an empty result here
+  // means genuinely empty rather than badly worded.
+  return {
+    ...keyword,
+    route: "keyword",
+    note:
+      direct.state === "empty"
+        ? `No live ads for ${spec.competitorName} in this country — checked both by keyword and by name.`
+        : keyword.note,
+    attempts: (keyword.attempts ?? 1) + (direct.attempts ?? 1),
+  };
 }

@@ -1,5 +1,9 @@
 # AdMirror
 
+**Latest build note:** Collection is now hard to defeat: the ad reader retries a wobbly read instead of recording it as an empty market, a rival missed by a keyword search is looked up by name, and searches that could not be reached are shown separately from rivals that are genuinely quiet — with a one-press retry for just those.
+
+# AdMirror
+
 **Latest build note:** The shared experience now uses a two-level market desk header, clearer analysis-stage navigation, and direct decision copy across the starting and approval moments.
 
 <!-- OWNER: Build (with the user) · READERS: every agent · READ THIS FIRST -->
