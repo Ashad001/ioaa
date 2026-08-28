@@ -1,5 +1,9 @@
 # AdMirror
 
+**Latest build note:** The decision bar on the angles board is now exactly one row tall. The "what gets made" spec sheet no longer sits inside the bar — it opens as a floating panel above the button, so the bar measures its own row whether the sheet is open or shut and can never grow over the frames. The reason a greyed-out press is unavailable still sits directly under it, naming the numbers and the way out.
+
+# AdMirror
+
 **Latest build note:** The make-ads press now explains itself. When it is unavailable, a red line sits directly beneath it naming the numbers and the way out — "30 assets from 5 angles — over the 12 cap for one press. Pick fewer angles, or turn off the customer-filmed cut." — with a link that opens the spec sheet, and "Pick at least one angle" when nothing is ticked. The cap and the pricing are unchanged; only the explanation was missing. The decision bar stays capped to under half the viewport and scrolls inside itself, so an open spec sheet can never cover the frames.
 
 # AdMirror

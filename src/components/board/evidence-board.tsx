@@ -17,7 +17,6 @@ import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState, useTransition } from "react";
 import {
   Check,
-  ChevronDown,
   ExternalLink,
   Image as ImageIcon,
   Layers,
@@ -34,6 +33,11 @@ import { Counter, EdgeCode, Plate } from "@/components/rack/plate";
 import { MatrixPicker } from "@/components/board/matrix-picker";
 import { TeardownDrawer } from "@/components/board/teardown-drawer";
 import { Button } from "@/components/ui/button";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 import { PLATFORM_LABELS } from "@/lib/admirror/ad-library";
 import {
   DEFAULT_MATRIX,
@@ -93,8 +97,8 @@ export function EvidenceBoard({
   const [pending, startTransition] = useTransition();
   const [inspecting, setInspecting] = useState<string | null>(null);
   const [matrix, setMatrix] = useState<MatrixChoice>(DEFAULT_MATRIX);
-  // The spec sheet starts folded. It is configuration with a sane default, and
-  // left open it is taller than the frames it configures.
+  // The spec sheet starts closed. It is configuration with a sane default, and
+  // it opens over the board rather than inside the bar.
   const [specOpen, setSpecOpen] = useState(false);
 
   // Selection is held in session storage, so a refresh mid-decision doesn't wipe it.
@@ -375,110 +379,94 @@ export function EvidenceBoard({
         </div>
       </div>
 
-      {/* The gate. Always visible once anything is on the sheet, and CAPPED:
-          the decision bar is a rail along the bottom, never a second pane. Its
-          own contents scroll inside the cap, so the sheet above it keeps the
-          height it was given no matter how tall the spec sheet gets. */}
+      {/* THE DECISION BAR — one row tall, and only ever one row tall.
+          The spec sheet used to live INSIDE this bar, which is why the bar grew
+          to cover the frames it sits under: a panel in the flow makes the rail
+          as tall as the panel. It now floats above the bar on its own layer, so
+          the bar measures exactly its own row whether the sheet is open or not. */}
       {clusters.length > 0 ? (
-        <div className="sticky bottom-0 z-30 max-h-[45dvh] shrink-0 overflow-y-auto border-t border-border bg-rack-rail/95 backdrop-blur-sm">
-          <div className="w-full px-4 py-3.5 sm:px-6 xl:px-8">
-            <div
-              className={cn(
-                "grid min-w-0 gap-x-6 gap-y-3.5 lg:items-end",
-                specOpen ? "lg:grid-cols-[minmax(0,1fr)_380px]" : "grid-cols-1",
-              )}
-            >
-              <div className="flex min-w-0 flex-wrap items-center gap-x-5 gap-y-3">
-                <div className="min-w-0">
-                  <Plate className="block">{RANK_CAPTION}</Plate>
-                  <p className="tabular mt-1 text-[12px] text-muted-foreground">
-                    {selectedItemIds.length} angle{selectedItemIds.length === 1 ? "" : "s"} picked ·{" "}
-                    {describeSpec(matrix)}
-                  </p>
-                </div>
-
-                <CoverageBand band={coverage.band} score={coverage.score} />
-
-                <div className="flex min-w-0 flex-1 items-center justify-end gap-2">
-                  {/* Configuration is folded away by default: it is a spec
-                      sheet, not the decision, and always-on it was tall enough
-                      to swallow the frames it is meant to serve. */}
-                  <Button
-                    variant="secondary"
-                    className="shrink-0"
-                    aria-expanded={specOpen}
-                    onClick={() => setSpecOpen((open) => !open)}
-                  >
-                    {specOpen ? (
-                      <ChevronDown size={13} strokeWidth={1.8} />
-                    ) : (
-                      <SlidersHorizontal size={13} strokeWidth={1.8} />
-                    )}
-                    <span className="min-w-0 truncate">
-                      {specOpen ? "Hide what gets made" : `What gets made · ${cost.total}`}
-                    </span>
-                  </Button>
-                  {alreadyGenerated ? (
-                    <Button variant="ghost" onClick={() => router.push(`/runs/${run.id}/creative`)}>
-                      <span className="min-w-0 truncate">See your ads</span>
-                    </Button>
-                  ) : null}
-                  <Button
-                    size="lg"
-                    className="shrink-0"
-                    disabled={pending || Boolean(blockedReason)}
-                    aria-describedby={blockedReason ? "gate-blocked-reason" : undefined}
-                    onClick={() =>
-                      startTransition(async () => {
-                        const result = await forceGeneration({
-                          runId: run.id,
-                          selectedItemIds,
-                          // Thin coverage is a warning, not a wall: the caveat
-                          // is recorded and shown on every asset instead.
-                          force: true,
-                          matrix,
-                        });
-                        if (!result.ok) {
-                          toast.error(result.error);
-                          return;
-                        }
-                        router.push(`/runs/${run.id}/creative`);
-                      })
-                    }
-                  >
-                    {pending ? "Writing your ads…" : "Make my ads from these"}
-                  </Button>
-                </div>
-
-                {/* The reason sits with the press, not behind a fold. */}
-                {blockedReason ? (
-                  <p
-                    id="gate-blocked-reason"
-                    role="status"
-                    className="w-full min-w-0 text-[12px] leading-relaxed text-lamp-alert"
-                  >
-                    {blockedReason}
-                    {cost.overCap && !specOpen ? (
-                      <button
-                        type="button"
-                        onClick={() => setSpecOpen(true)}
-                        className="ml-1.5 underline decoration-lamp-alert/60 underline-offset-2 transition-colors hover:text-foreground"
-                      >
-                        Open what gets made
-                      </button>
-                    ) : null}
-                  </p>
-                ) : null}
-              </div>
-
-              {specOpen ? (
-                <MatrixPicker
-                  choice={matrix}
-                  onChange={setMatrix}
-                  angleCount={Math.max(1, selectedItemIds.length)}
-                />
-              ) : null}
+        <div className="sticky bottom-0 z-30 shrink-0 border-t border-border bg-rack-rail/95 backdrop-blur-sm">
+          <div className="flex min-w-0 flex-wrap items-center gap-x-5 gap-y-2 px-4 py-3 sm:px-6 xl:px-8">
+            <div className="min-w-0">
+              <Plate className="block truncate">{RANK_CAPTION}</Plate>
+              <p className="tabular mt-1 truncate text-[12px] text-muted-foreground">
+                {selectedItemIds.length} angle{selectedItemIds.length === 1 ? "" : "s"} picked ·{" "}
+                {describeSpec(matrix)}
+              </p>
             </div>
+
+            <CoverageBand band={coverage.band} score={coverage.score} />
+
+            <div className="flex min-w-0 flex-1 items-center justify-end gap-2">
+              <Popover open={specOpen} onOpenChange={setSpecOpen}>
+                <PopoverTrigger render={<Button variant="secondary" className="shrink-0" />}>
+                  <SlidersHorizontal size={13} strokeWidth={1.8} />
+                  <span className="min-w-0 truncate">What gets made · {cost.total}</span>
+                </PopoverTrigger>
+                <PopoverContent
+                  side="top"
+                  align="end"
+                  sideOffset={10}
+                  className="max-h-[60dvh] w-[360px] overflow-y-auto bg-transparent p-0 shadow-xl ring-0"
+                >
+                  <MatrixPicker
+                    choice={matrix}
+                    onChange={setMatrix}
+                    angleCount={Math.max(1, selectedItemIds.length)}
+                  />
+                </PopoverContent>
+              </Popover>
+              {alreadyGenerated ? (
+                <Button variant="ghost" onClick={() => router.push(`/runs/${run.id}/creative`)}>
+                  <span className="min-w-0 truncate">See your ads</span>
+                </Button>
+              ) : null}
+              <Button
+                size="lg"
+                className="shrink-0"
+                disabled={pending || Boolean(blockedReason)}
+                aria-describedby={blockedReason ? "gate-blocked-reason" : undefined}
+                onClick={() =>
+                  startTransition(async () => {
+                    const result = await forceGeneration({
+                      runId: run.id,
+                      selectedItemIds,
+                      // Thin coverage is a warning, not a wall: the caveat is
+                      // recorded and shown on every asset instead.
+                      force: true,
+                      matrix,
+                    });
+                    if (!result.ok) {
+                      toast.error(result.error);
+                      return;
+                    }
+                    router.push(`/runs/${run.id}/creative`);
+                  })
+                }
+              >
+                {pending ? "Writing your ads…" : "Make my ads from these"}
+              </Button>
+            </div>
+
+            {/* The reason sits with the press, never behind the fold. */}
+            {blockedReason ? (
+              <p
+                id="gate-blocked-reason"
+                role="status"
+                className="w-full min-w-0 text-[12px] leading-relaxed text-lamp-alert"
+              >
+                {blockedReason}
+                {cost.overCap && !specOpen ? (
+                  <button
+                    type="button"
+                    onClick={() => setSpecOpen(true)}
+                    className="ml-1.5 underline decoration-lamp-alert/60 underline-offset-2 transition-colors hover:text-foreground"
+                  >
+                    Open what gets made
+                  </button>
+                ) : null}
+              </p>
+            ) : null}
           </div>
         </div>
       ) : null}
