@@ -1,5 +1,6 @@
 "use server";
 
+
 /**
  * THE PROFILE GATE — the stage that now comes before any ad lookup.
  *
@@ -29,7 +30,8 @@ import {
   readingFrom,
   type StoredCategory,
 } from "@/lib/admirror/profile-build";
-import { tidyName, type CompanyProfile, type ProfileRival } from "@/lib/admirror/profile";
+import { tidyName } from "@/lib/admirror/profile";
+import type { CompanyProfile, ProfileRival } from "@/lib/admirror/profile";
 import {
   profileNamedRival,
   scanCategoryRivals,
@@ -477,4 +479,4 @@ export async function reopenProfile(runId: string): Promise<ProfileResult> {
   }
 }
 
-export type { CompanyProfile, ProfileRival };
+export type { CompanyProfile, ProfileRival } from "@/lib/admirror/profile";
