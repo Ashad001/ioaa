@@ -15,7 +15,14 @@
  */
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState, useTransition } from "react";
-import { Check, ExternalLink, Image as ImageIcon, Layers } from "lucide-react";
+import {
+  Check,
+  ChevronDown,
+  ExternalLink,
+  Image as ImageIcon,
+  Layers,
+  SlidersHorizontal,
+} from "lucide-react";
 import { toast } from "sonner";
 
 import { forceGeneration } from "@/app/actions/gate";
@@ -85,6 +92,9 @@ export function EvidenceBoard({
   const [pending, startTransition] = useTransition();
   const [inspecting, setInspecting] = useState<string | null>(null);
   const [matrix, setMatrix] = useState<MatrixChoice>(DEFAULT_MATRIX);
+  // The spec sheet starts folded. It is configuration with a sane default, and
+  // left open it is taller than the frames it configures.
+  const [specOpen, setSpecOpen] = useState(false);
 
   // Selection is held in session storage, so a refresh mid-decision doesn't wipe it.
   const { selected, toggle, clear } = usePersistentSelection(`admirror.gate.${run.id}`);
@@ -339,11 +349,19 @@ export function EvidenceBoard({
         </div>
       </div>
 
-      {/* The gate. Always visible once anything is on the sheet. */}
+      {/* The gate. Always visible once anything is on the sheet, and CAPPED:
+          the decision bar is a rail along the bottom, never a second pane. Its
+          own contents scroll inside the cap, so the sheet above it keeps the
+          height it was given no matter how tall the spec sheet gets. */}
       {clusters.length > 0 ? (
-        <div className="sticky bottom-0 z-30 border-t border-border bg-rack-rail/95 backdrop-blur-sm">
+        <div className="sticky bottom-0 z-30 max-h-[45dvh] shrink-0 overflow-y-auto border-t border-border bg-rack-rail/95 backdrop-blur-sm">
           <div className="w-full px-4 py-3.5 sm:px-6 xl:px-8">
-            <div className="grid min-w-0 gap-x-6 gap-y-3.5 lg:grid-cols-[minmax(0,1fr)_380px] lg:items-end">
+            <div
+              className={cn(
+                "grid min-w-0 gap-x-6 gap-y-3.5 lg:items-end",
+                specOpen ? "lg:grid-cols-[minmax(0,1fr)_380px]" : "grid-cols-1",
+              )}
+            >
               <div className="flex min-w-0 flex-wrap items-center gap-x-5 gap-y-3">
                 <div className="min-w-0">
                   <Plate className="block">{RANK_CAPTION}</Plate>
@@ -356,6 +374,24 @@ export function EvidenceBoard({
                 <CoverageBand band={coverage.band} score={coverage.score} />
 
                 <div className="flex min-w-0 flex-1 items-center justify-end gap-2">
+                  {/* Configuration is folded away by default: it is a spec
+                      sheet, not the decision, and always-on it was tall enough
+                      to swallow the frames it is meant to serve. */}
+                  <Button
+                    variant="secondary"
+                    className="shrink-0"
+                    aria-expanded={specOpen}
+                    onClick={() => setSpecOpen((open) => !open)}
+                  >
+                    {specOpen ? (
+                      <ChevronDown size={13} strokeWidth={1.8} />
+                    ) : (
+                      <SlidersHorizontal size={13} strokeWidth={1.8} />
+                    )}
+                    <span className="min-w-0 truncate">
+                      {specOpen ? "Hide what gets made" : `What gets made · ${cost.total}`}
+                    </span>
+                  </Button>
                   {alreadyGenerated ? (
                     <Button variant="ghost" onClick={() => router.push(`/runs/${run.id}/creative`)}>
                       <span className="min-w-0 truncate">See your ads</span>
@@ -388,11 +424,13 @@ export function EvidenceBoard({
                 </div>
               </div>
 
-              <MatrixPicker
-                choice={matrix}
-                onChange={setMatrix}
-                angleCount={Math.max(1, selectedItemIds.length)}
-              />
+              {specOpen ? (
+                <MatrixPicker
+                  choice={matrix}
+                  onChange={setMatrix}
+                  angleCount={Math.max(1, selectedItemIds.length)}
+                />
+              ) : null}
             </div>
           </div>
         </div>

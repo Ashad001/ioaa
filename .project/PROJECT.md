@@ -1,5 +1,9 @@
 # AdMirror
 
+**Latest build note:** The angles board is readable again. The decision bar at the bottom is capped and scrolls inside itself, and the "what gets made" spec sheet is folded away behind one press instead of standing open — so the frames above keep their space. Copy-only ads (most of what a pasted Library page yields) now size to their own words instead of holding a picture's 4:5 frame, so a board of seventy text ads is a tight grid rather than a column of tall empty boxes. Frames with real artwork or video keep the 4:5 contact-sheet crop.
+
+# AdMirror
+
 **Latest build note:** Rival ads no longer depend on a connected reader. The Ad Library is public, so the collect screen hands the user the exact search, they open it in their own browser, copy the page, and AdMirror reads the ads straight off the paste — landing them in the same place, the same shape and the same ranking as automatically collected ads, under their own provenance ("read from the Library page in your browser"). A field the page did not show stays empty; nothing is guessed and no performance figure is written. The automatic reader is untouched and takes over the moment its connection is added.
 
 # AdMirror

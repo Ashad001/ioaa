@@ -7,15 +7,19 @@
  * 1. THE AD HAS ARTWORK. Either the picture the public Library card displayed —
  *    referenced at the address the page itself points at, never copied — or a
  *    screenshot the user attached. This is the case the whole product is for:
- *    seeing the market's actual creative. It is shown as the frame's emulsion.
+ *    seeing the market's actual creative. It is shown as the frame's emulsion,
+ *    and it keeps a 4:5 frame so a wall of them reads as one contact sheet.
  * 2. THE AD IS TEXT ONLY. Most hand-pasted items arrive this way, and rendering
  *    those as an empty box makes perfectly good evidence look like MISSING
  *    evidence. So text-only gets a deliberate typographic frame: the copy set
- *    properly on emulsion, with the CTA drawn as the button it was.
+ *    properly on emulsion, with the CTA drawn as the button it was — and it
+ *    sizes to that copy rather than holding a picture's aspect it has no
+ *    picture for. Forcing 4:5 on a copy-only frame is what turned a board of
+ *    seventy text ads into seventy tall, mostly-empty rectangles.
  *
  * A referenced picture can go dead when Meta rotates its addresses, so the
  * markup has to survive a picture that never loads — hence the frame keeps its
- * own aspect and legend underneath whatever does or doesn't arrive.
+ * own legend underneath whatever does or doesn't arrive.
  */
 "use client";
 
@@ -139,10 +143,12 @@ export function AdRender({
 
   const hasCopy = Boolean(headline.trim() || bodyCopy.trim());
 
+  // COPY-ONLY FRAME. No fixed aspect: the frame is as tall as the words in it,
+  // with a floor so a one-line headline still reads as a frame rather than a row.
   return (
     <div
       className={cn(
-        "emulsion relative flex aspect-[4/5] flex-col justify-between overflow-hidden rounded-sm border border-border/60 px-4 py-4",
+        "emulsion relative flex min-h-[13rem] flex-col justify-between overflow-hidden rounded-sm border border-border/60 px-4 py-4",
         className,
       )}
     >
