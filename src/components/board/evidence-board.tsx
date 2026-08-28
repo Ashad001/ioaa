@@ -14,7 +14,7 @@
  * the teardown, not here.
  */
 import { useRouter } from "next/navigation";
-import { useMemo, useState, useTransition } from "react";
+import { useEffect, useMemo, useState, useTransition } from "react";
 import { Check, ExternalLink, Image as ImageIcon, Layers } from "lucide-react";
 import { toast } from "sonner";
 
@@ -87,7 +87,7 @@ export function EvidenceBoard({
   const [matrix, setMatrix] = useState<MatrixChoice>(DEFAULT_MATRIX);
 
   // Selection is held in session storage, so a refresh mid-decision doesn't wipe it.
-  const { selected, toggle } = usePersistentSelection(`admirror.gate.${run.id}`);
+  const { selected, toggle, clear } = usePersistentSelection(`admirror.gate.${run.id}`);
 
   const scoreByItem = useMemo(
     () => new Map(scores.map((score) => [score.evidenceItemId, score])),
@@ -114,8 +114,23 @@ export function EvidenceBoard({
       .sort((a, b) => b.best - a.best);
   }, [items, scoreByItem]);
 
+  const selectedItemIds = selected.filter((id) => items.some((item) => item.id === id));
+  const recommendedItemId = clusters[0]?.items[0]?.id ?? null;
+
+  // Opening an approved board should never leave the only next action disabled.
+  // The best-ranked frame is a starting recommendation, not a hidden decision:
+  // the user can replace it with any other frame before pressing the gate.
+  useEffect(() => {
+    if (!recommendedItemId || selectedItemIds.length > 0) return;
+    if (selected.length > 0) {
+      clear();
+      return;
+    }
+    toggle(recommendedItemId);
+  }, [clear, recommendedItemId, selected.length, selectedItemIds.length, toggle]);
+
   const inspectingItem = items.find((item) => item.id === inspecting) ?? null;
-  const cost = priceMatrix(matrix, Math.max(1, selected.length));
+  const cost = priceMatrix(matrix, Math.max(1, selectedItemIds.length));
   const withArt = items.filter((item) => Boolean(item.creativeUrl ?? item.artefactUrl)).length;
 
   return (
@@ -139,7 +154,7 @@ export function EvidenceBoard({
                 <Counter value={items.length} label="Frames on the sheet" />
                 <Counter value={withArt} label="With artwork" />
                 <Counter value={clusters.length} label="Distinct angles" />
-                <Counter value={selected.length} label="You've picked" />
+                <Counter value={selectedItemIds.length} label="You've picked" />
               </div>
 
               <div className="space-y-7">
@@ -160,7 +175,7 @@ export function EvidenceBoard({
                       {cluster.items.map((item) => {
                         const score = scoreByItem.get(item.id) ?? null;
                         const platforms = item.platforms.split(",").filter(Boolean);
-                        const isSelected = selected.includes(item.id);
+                        const isSelected = selectedItemIds.includes(item.id);
                         const hasArt = Boolean(item.creativeUrl ?? item.artefactUrl);
                         const past = history?.[item.id] ?? null;
                         return (
@@ -333,7 +348,7 @@ export function EvidenceBoard({
                 <div className="min-w-0">
                   <Plate className="block">{RANK_CAPTION}</Plate>
                   <p className="tabular mt-1 text-[12px] text-muted-foreground">
-                    {selected.length} angle{selected.length === 1 ? "" : "s"} picked ·{" "}
+                    {selectedItemIds.length} angle{selectedItemIds.length === 1 ? "" : "s"} picked ·{" "}
                     {describeSpec(matrix)}
                   </p>
                 </div>
@@ -349,12 +364,12 @@ export function EvidenceBoard({
                   <Button
                     size="lg"
                     className="shrink-0"
-                    disabled={pending || selected.length === 0 || cost.overCap}
+                    disabled={pending || selectedItemIds.length === 0 || cost.overCap}
                     onClick={() =>
                       startTransition(async () => {
                         const result = await forceGeneration({
                           runId: run.id,
-                          selectedItemIds: selected,
+                          selectedItemIds,
                           // Thin coverage is a warning, not a wall: the caveat
                           // is recorded and shown on every asset instead.
                           force: true,
@@ -376,7 +391,7 @@ export function EvidenceBoard({
               <MatrixPicker
                 choice={matrix}
                 onChange={setMatrix}
-                angleCount={Math.max(1, selected.length)}
+                angleCount={Math.max(1, selectedItemIds.length)}
               />
             </div>
           </div>
