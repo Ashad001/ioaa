@@ -4,7 +4,7 @@
  * WHY THIS EXISTS. Meta blocks datacentre reads of the Ad Library, and in some
  * countries the official API is not available at all — so a server may be unable
  * to see a page that the user's own browser renders perfectly. That asymmetry is
- * the whole opportunity: the person running AdMirror can open the public Library
+ * the whole opportunity: the person running IOAA.AI can open the public Library
  * page themselves, select the page, copy it, and paste it here. No key, no
  * account, no signup, nothing to connect.
  *

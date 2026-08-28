@@ -4,7 +4,7 @@
  * BRING THE ADS BACK YOURSELF — the route that works with nothing connected.
  *
  * WHY THIS EXISTS. In some countries the Ad Library cannot be read from a server
- * at all, and AdMirror's own reader may not be connected. But the public Library
+ * at all, and IOAA.AI's own reader may not be connected. But the public Library
  * page opens perfectly in the user's own browser, and what their browser can see,
  * they can copy. So this pane hands them the exact search, then reads the page
  * they paste back — no key, no signup, nothing to connect.
@@ -76,7 +76,7 @@ export function BrowserImport({
       <div className="min-w-0 border-l-2 border-primary/70 bg-primary/[0.05] px-3.5 py-3">
         <Plate className="block">Read it in your own browser</Plate>
         <p className="mt-1 max-w-[65ch] text-[11.5px] leading-relaxed text-muted-foreground">
-          AdMirror already reads the Library itself on every sweep. This is the backup for a
+          IOAA.AI already reads the Library itself on every sweep. This is the backup for a
           search that keeps coming back unread: open it yourself, copy the page, and the ads
           land on the sheet the same way.
         </p>
@@ -156,7 +156,7 @@ export function BrowserImport({
           <p className="mt-2 flex min-w-0 items-center gap-1.5 text-[11px] text-muted-foreground">
             <ClipboardPaste size={12} strokeWidth={1.7} className="shrink-0" />
             <span className="min-w-0 truncate">
-              AdMirror shows you what it read before anything is saved.
+              IOAA.AI shows you what it read before anything is saved.
             </span>
           </p>
         )}

@@ -60,7 +60,7 @@ export function CollectWorkspace({
   const [activeSearchId, setActiveSearchId] = useState<string | null>(searches[0]?.id ?? null);
   const [composerOpen, setComposerOpen] = useState(false);
   /**
-   * Two ways to fill a gap. AdMirror now reads the Library itself on every run,
+   * Two ways to fill a gap. IOAA.AI now reads the Library itself on every run,
    * so both of these are for the REMAINDER — a search that came back unread, or
    * an ad spotted somewhere the Library doesn't cover. Neither is the main route
    * any more, so neither opens by default.

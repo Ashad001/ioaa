@@ -4,7 +4,7 @@
  * The standing watch: how often to look again, and when the next look is due.
  *
  * The honest thing to say on this panel, and it is said out loud: this schedules
- * a NUDGE. Nothing in AdMirror wakes up and asks Meta for anything — a reminder
+ * a NUDGE. Nothing in IOAA.AI wakes up and asks Meta for anything — a reminder
  * fires, and the sweep happens because a person pressed the button.
  */
 import { useState, useTransition } from "react";

@@ -120,7 +120,7 @@ export const userRelations = relations(user, ({ many }) => ({
 // );
 // ─── Your tables go below this line ───────────────────────────────────────────
 //
-// AdMirror, Browser Evidence Mode.
+// IOAA.AI, Browser Evidence Mode.
 //
 // The shape here follows one rule above all others: a number about a competitor's
 // ad exists only because a human saw it and entered it, or because we derived it
@@ -234,7 +234,7 @@ export const competitor = pgTable(
 
 /**
  * A saved public Ad Library search — the record of WHERE ads on the board came
- * from. AdMirror runs these searches itself against the PUBLIC Library page, and
+ * from. IOAA.AI runs these searches itself against the PUBLIC Library page, and
  * the user can open the same link to check our reading against the real thing.
  */
 export const searchReference = pgTable(
@@ -828,7 +828,7 @@ export const watchTarget = pgTable(
  * it inherited. Without that chain the loop is not closed and the pattern library
  * would be aggregating anonymous numbers.
  *
- * NOTHING here is fetched. AdMirror does not hold an ad-account token, does not
+ * NOTHING here is fetched. IOAA.AI does not hold an ad-account token, does not
  * publish, and does not pull insights: the user launches in their own ads manager
  * and reports back what happened. That is a smaller claim than the brief's phase
  * 16-17 and it is the honest one for this build.
@@ -845,7 +845,7 @@ export const shippedAd = pgTable(
     runId: text("run_id")
       .notNull()
       .references(() => run.id, { onDelete: "cascade" }),
-    /** The generated cell this became. Null only for an ad shipped outside AdMirror. */
+    /** The generated cell this became. Null only for an ad shipped outside IOAA.AI. */
     variantId: text("variant_id").references(() => creativeVariant.id, {
       onDelete: "set null",
     }),

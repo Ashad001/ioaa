@@ -10,15 +10,15 @@ export async function generateMetadata(): Promise<Metadata> {
   return {
     metadataBase: new URL(await siteUrl()),
     title: {
-      default: "AdMirror — their best angle, your ad",
-      template: "%s · AdMirror",
+      default: "IOAA.AI — their best angle, your ad",
+      template: "%s · IOAA.AI",
     },
     description:
-      "AdMirror maps live paid-social creative from the public Meta Ad Library, ranks the observed signals honestly, and turns the angle you choose into original ad variants and a test plan.",
+      "IOAA.AI maps live paid-social creative from the public Meta Ad Library, ranks the observed signals honestly, and turns the angle you choose into original ad variants and a test plan.",
     openGraph: {
-      title: "AdMirror — their best angle, your ad",
+      title: "IOAA.AI — their best angle, your ad",
       description:
-        "AdMirror maps live paid-social creative from the public Ad Library, ranks observed signals honestly, and turns the angle you choose into your own variants.",
+        "IOAA.AI maps live paid-social creative from the public Ad Library, ranks observed signals honestly, and turns the angle you choose into your own variants.",
       type: "website",
     },
   };

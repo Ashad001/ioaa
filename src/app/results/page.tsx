@@ -170,7 +170,7 @@ export default async function ResultsPage() {
     >
       <PaneHeader
         title="Results"
-        hint="What the ads you shipped actually did — the only measured numbers in AdMirror."
+        hint="What the ads you shipped actually did — the only measured numbers in IOAA.AI."
         actions={<EdgeCode>{cards.length} shipped</EdgeCode>}
       />
 
@@ -196,14 +196,14 @@ export default async function ResultsPage() {
                 <Panel label="Nothing shipped yet">
                   <div className="max-w-[64ch] px-4 py-6">
                     <p className="text-[13.5px] leading-relaxed text-foreground/85">
-                      This is the half of AdMirror that can actually measure something.
+                      This is the half of IOAA.AI that can actually measure something.
                       Everything on a competitor card is inference from what was collected —
                       the public Ad Library publishes no performance figure. Your own ads
                       are different: you have the real numbers.
                     </p>
                     <p className="mt-3 text-[12.5px] leading-relaxed text-muted-foreground">
                       Launch a variant in your own ads manager, mark it shipped on the
-                      handoff screen, and come back with the numbers. AdMirror indexes them
+                      handoff screen, and come back with the numbers. IOAA.AI indexes them
                       against your own average and tells you which part of the ad did the
                       work — or that it&rsquo;s too early to say.
                     </p>
@@ -249,7 +249,7 @@ export default async function ResultsPage() {
                       <span aria-hidden className="mt-1.5 size-1 shrink-0 rounded-full bg-primary" />
                       <span className="min-w-0">
                         Compare you to anyone else. There is no industry benchmark in here,
-                        because there is none AdMirror could honestly know.
+                        because there is none IOAA.AI could honestly know.
                       </span>
                     </li>
                     <li className="flex min-w-0 gap-2">
@@ -263,7 +263,7 @@ export default async function ResultsPage() {
                     <li className="flex min-w-0 gap-2">
                       <span aria-hidden className="mt-1.5 size-1 shrink-0 rounded-full bg-primary" />
                       <span className="min-w-0">
-                        Launch anything. AdMirror holds no access to your ad account — you
+                        Launch anything. IOAA.AI holds no access to your ad account — you
                         launch, you read the numbers, you type them here.
                       </span>
                     </li>
@@ -278,7 +278,7 @@ export default async function ResultsPage() {
                 <div className="px-4 py-4">
                   <Plate className="block">The pattern library</Plate>
                   <p className="mt-1 max-w-[46ch] text-[12px] leading-relaxed text-muted-foreground">
-                    Once a few ads carry the same hook mechanism, AdMirror starts telling
+                    Once a few ads carry the same hook mechanism, IOAA.AI starts telling
                     you which mechanisms hold up in your category and market — with the
                     sample size on every cell.
                   </p>

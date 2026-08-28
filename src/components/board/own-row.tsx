@@ -74,7 +74,7 @@ export function OwnRow({ runId, ads }: { runId: string; ads: OwnRowData[] }) {
           Your own ads carry real numbers, because you have them. The competitor cards below
           carry an opportunity score built from what Meta does publish — reach where it exists,
           plus how long and how widely each ad runs. Meta publishes no spend or cost per result
-          for them, so AdMirror never puts those two on one scale: no ring on this row, no cost
+          for them, so IOAA.AI never puts those two on one scale: no ring on this row, no cost
           per result on theirs.
         </p>
 
@@ -83,7 +83,7 @@ export function OwnRow({ runId, ads }: { runId: string; ads: OwnRowData[] }) {
         {ads.length === 0 ? (
           adding ? null : (
             <p className="mt-3 max-w-[64ch] text-[13px] leading-relaxed text-foreground/80">
-              Add one of your own ads and AdMirror will read your real voice off your own
+              Add one of your own ads and IOAA.AI will read your real voice off your own
               copy instead of guessing it from your website — and you&rsquo;ll have your own
               numbers beside the market for context.
             </p>
@@ -246,7 +246,7 @@ function AddForm({ runId, onDone }: { runId: string; onDone: () => void }) {
 
       <div className="mt-3 min-w-0">
         <Label htmlFor="own-body" className="plate block text-rack-engrave">
-          Body copy — this is what AdMirror reads your real voice from
+          Body copy — this is what IOAA.AI reads your real voice from
         </Label>
         <Textarea
           id="own-body"

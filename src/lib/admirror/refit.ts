@@ -43,16 +43,16 @@ export const MAX_MOVE_PER_ROUND = 0.5;
 export const MOVE_WORTH_SHOWING = 0.02;
 
 export const REFIT_RULE =
-  `A weight change needs ${MIN_ADS_FOR_REFIT} of your own measured ads with at least ${MIN_DAYS_FOR_REFIT} days running. Under that AdMirror shows no proposal and no numbers, because tuning a ranking on a handful of noisy ads is how a scoring model starts confidently ranking rubbish.`;
+  `A weight change needs ${MIN_ADS_FOR_REFIT} of your own measured ads with at least ${MIN_DAYS_FOR_REFIT} days running. Under that IOAA.AI shows no proposal and no numbers, because tuning a ranking on a handful of noisy ads is how a scoring model starts confidently ranking rubbish.`;
 
 export const REFIT_CANNOT_PROVE =
   "This is a correlation inside your own account, not a law of advertising. It says which signals have tracked cheaper results for you so far — never why, and never that they will again.";
 
 export const REFIT_NEVER_AUTO_RULE =
-  "AdMirror never changes this on its own. A proposal sits inert: your boards keep ranking on the weighting in force until you accept a new one, and you can go back at any time.";
+  "IOAA.AI never changes this on its own. A proposal sits inert: your boards keep ranking on the weighting in force until you accept a new one, and you can go back at any time.";
 
 /**
- * AdMirror's own shipped weighting — the vector every fallback returns to.
+ * IOAA.AI's own shipped weighting — the vector every fallback returns to.
  *
  * Held here rather than imported so this module stays free of runtime imports for
  * the honesty check, which runs the fit for real. That check also asserts this
@@ -141,7 +141,7 @@ export function weightsSum(vector: EbosWeights): number {
   return Math.round(COMPONENT_ORDER.reduce((sum, key) => sum + vector[key], 0) * 10_000) / 10_000;
 }
 
-/** True when a vector is AdMirror's own shipped weighting rather than a fitted one. */
+/** True when a vector is IOAA.AI's own shipped weighting rather than a fitted one. */
 export function isDefaultWeights(vector: EbosWeights): boolean {
   return COMPONENT_ORDER.every((key) => Math.abs(vector[key] - DEFAULT_WEIGHTS[key]) < 0.0005);
 }
@@ -442,7 +442,7 @@ export function fitWeights(
       : `Across ${usable.length} of your own measured ads, the score's signals moved apart enough to be worth re-balancing.`;
 
   const parts: string[] = [
-    `Across ${usable.length} of your own measured ads, AdMirror compared each ad's cost per result against the opportunity signals of the angle it came from.`,
+    `Across ${usable.length} of your own measured ads, IOAA.AI compared each ad's cost per result against the opportunity signals of the angle it came from.`,
   ];
   if (helps.length > 0) {
     parts.push(

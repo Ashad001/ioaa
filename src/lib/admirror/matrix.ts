@@ -222,12 +222,12 @@ export function buildRoundedPlan(input: {
     readable: false,
     readabilityNote: input.hasCostData
       ? "Sized from your account's own recent delivery costs."
-      : "This plan is un-costed: no ad account is connected, so AdMirror has no delivery cost to size it from. The structure is right; put your own daily budget against it and read it when every cell has had equal delivery.",
+      : "This plan is un-costed: no ad account is connected, so IOAA.AI has no delivery cost to size it from. The structure is right; put your own daily budget against it and read it when every cell has had equal delivery.",
     nextRoundLogic: `Round one picks the opening beat. Whatever wins carries forward unchanged — ${angle.toLowerCase()} is the constant across every round, and the ${objective.toLowerCase()} objective never changes mid-test.`,
     assumptions: [
       "One ad set, even split, no manual bid adjustments while it runs.",
       "Every cell reaches the same audience, so the difference you read is the creative.",
-      "Numbers come from your own ad account. AdMirror does not have them and will not estimate them.",
+      "Numbers come from your own ad account. IOAA.AI does not have them and will not estimate them.",
     ],
   };
 }

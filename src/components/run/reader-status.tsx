@@ -6,7 +6,7 @@
  * silent: the user watched a progress lamp, then got what looked like an empty
  * market. So this banner existed to name the missing connection early.
  *
- * WHAT CHANGED. AdMirror now reads the public Ad Library ITSELF, using a real
+ * WHAT CHANGED. IOAA.AI now reads the public Ad Library ITSELF, using a real
  * browser on its own server that clears Meta's bot check the same way a person's
  * browser does. There is nothing to connect and nothing to buy, so there is no
  * longer a broken state to warn about — which means this component renders
@@ -47,7 +47,7 @@ export function ReaderStatus({
         </p>
         <p className="mt-1 max-w-[65ch] text-[12.5px] leading-relaxed text-muted-foreground">
           {context === "start"
-            ? "AdMirror opens the public Ad Library itself and reads your rivals' live ads — copy, artwork and video included. Nothing to connect."
+            ? "IOAA.AI opens the public Ad Library itself and reads your rivals' live ads — copy, artwork and video included. Nothing to connect."
             : "These ads were read straight from the public Ad Library. Meta publishes no spend or click figure for commercial ads, so none appears here — only what the page itself shows."}
         </p>
       </div>

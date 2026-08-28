@@ -1,3 +1,7 @@
+# IOAA.AI
+
+**Latest build note:** The product is now called IOAA.AI (formerly AdMirror). The name was changed everywhere it appears to a user — the header wordmark (IOAA with a tinted .AI), the browser/tab title and share description, the sign-in panel, and every explanatory line across the run, collect, board, results, patterns, watch and library screens. No feature, query, route or data changed; internal module folder names were left as-is since they are never shown.
+
 # AdMirror
 
 **Latest build note:** AdMirror's data now lives in the owner's OWN Supabase project rather than the platform-provided database. The project was created, the full 25-table schema was applied from `src/db/schema.ts` (generated via drizzle-kit, applied through `run_sql`), and all existing rows were copied across and row-count verified: 2 users, 2 accounts, 3 sessions, 1 verification, 7 runs, 105 run steps, 26 competitors, 41 search references, 4 evidence batches, 119 evidence items, 119 ad scores, 4 sweep-progress rows, 1 snapshot, 47 ad observations, 47 ad statuses, 1 period briefing. Empty tables were created but had nothing to move.

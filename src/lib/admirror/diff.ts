@@ -4,7 +4,7 @@
  * The rule that governs every word on this screen: an ad missing from the newer
  * capture has NOT been "killed" or "stopped". It was not observed in the latest
  * submitted snapshot — which might mean it ended, or might mean the user scrolled
- * less far that day. Only after THREE comparable snapshots miss it does AdMirror
+ * less far that day. Only after THREE comparable snapshots miss it does IOAA.AI
  * say "likely no longer active", and it states that rule inline wherever the
  * status appears.
  */

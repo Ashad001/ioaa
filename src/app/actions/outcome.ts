@@ -4,12 +4,12 @@
  * The closed loop's write side: what you shipped, what it did, and what your
  * account's normal looks like.
  *
- * WHAT THIS DOES NOT DO, deliberately. The brief's phases 16–17 have AdMirror
+ * WHAT THIS DOES NOT DO, deliberately. The brief's phases 16–17 have IOAA.AI
  * publish to Ads Manager and pull Insights on a nightly job. That needs an ad
  * account token and a reviewed app, and neither exists here — so rather than
  * shipping a button that cannot work, the loop closes the honest way: the user
  * launches in their own ads manager and reports the numbers back. Every figure
- * below is therefore `self_reported_own_account`, which is a claim AdMirror can
+ * below is therefore `self_reported_own_account`, which is a claim IOAA.AI can
  * actually stand behind.
  *
  * Every action loads the session and filters by that user's id. A record id from
@@ -201,7 +201,7 @@ export async function reportResult(input: {
       return {
         ok: false,
         error:
-          "The view count is the one figure AdMirror needs — it's what decides whether there's enough here to read anything into.",
+          "The view count is the one figure IOAA.AI needs — it's what decides whether there's enough here to read anything into.",
       };
     }
 

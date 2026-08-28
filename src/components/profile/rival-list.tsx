@@ -453,7 +453,7 @@ function RivalRow({
                     <p className="font-medium">Published by Meta</p>
                     <p className="mt-1 text-xs opacity-85">
                       The widest range Meta publishes across their ads we read, reproduced exactly.
-                      AdMirror never narrows it to a single number, and it says nothing about
+                      IOAA.AI never narrows it to a single number, and it says nothing about
                       whether the ad worked.
                     </p>
                   </TooltipContent>

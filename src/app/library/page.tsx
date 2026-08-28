@@ -76,7 +76,7 @@ export default async function LibraryPage() {
             <div className="max-w-[54ch] py-10">
               <Plate className="block">No runs yet</Plate>
               <p className="mt-2 text-[13.5px] leading-relaxed text-muted-foreground">
-                Start with your brand and the country you sell in. AdMirror maps the competition and hands
+                Start with your brand and the country you sell in. IOAA.AI maps the competition and hands
                 you the searches to open.
               </p>
               <Button className="mt-4" render={<Link href="/" />}>Start your first run</Button>

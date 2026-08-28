@@ -3,7 +3,7 @@
 /**
  * S3-B — the capture composer. The single highest-leverage interaction in v1.
  *
- * Someone alt-tabbing between the Ad Library and AdMirror will submit dozens of
+ * Someone alt-tabbing between the Ad Library and IOAA.AI will submit dozens of
  * screenshots if attaching one is a keystroke, and four ads if it opens a file
  * dialog. So: ⌘/Ctrl+V anywhere on the page attaches whatever is on the
  * clipboard — an image becomes an artefact, text becomes the ad copy, a Library
@@ -478,7 +478,7 @@ export function CaptureComposer({
             </div>
 
             <p className="text-[11px] leading-relaxed text-muted-foreground">
-              Anything you leave blank stays &ldquo;not captured&rdquo; — AdMirror won&rsquo;t fill it with a
+              Anything you leave blank stays &ldquo;not captured&rdquo; — IOAA.AI won&rsquo;t fill it with a
               guess. Mark a field <span className="text-lamp-live">obs</span> when your screenshot actually
               shows it; otherwise it&rsquo;s recorded as entered by you.
             </p>

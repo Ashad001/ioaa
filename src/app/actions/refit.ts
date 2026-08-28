@@ -88,7 +88,7 @@ export async function proposeWeightRefit(): Promise<RefitActionResult> {
       ok: true,
       state: "proposed",
       message: proposal.unchanged
-        ? `AdMirror compared ${proposal.sampleSize} of your own measured ads and found nothing worth changing. That is a real answer — it's on the Results screen.`
+        ? `IOAA.AI compared ${proposal.sampleSize} of your own measured ads and found nothing worth changing. That is a real answer — it's on the Results screen.`
         : `A weighting fitted to ${proposal.sampleSize} of your own measured ads is ready for you to look at. Nothing has changed yet.`,
     };
   } catch (error) {
@@ -168,14 +168,14 @@ export async function declineWeightProposal(proposalId: string): Promise<RefitAc
     return {
       ok: true,
       state: "declined",
-      message: "Left as it was. AdMirror keeps ranking on the weighting you already had.",
+      message: "Left as it was. IOAA.AI keeps ranking on the weighting you already had.",
     };
   } catch (error) {
     return fail(error);
   }
 }
 
-/** Go back to the weighting AdMirror shipped with, from a user's own decision. */
+/** Go back to the weighting IOAA.AI shipped with, from a user's own decision. */
 export async function revertToDefaultWeights(): Promise<RefitActionResult> {
   try {
     const user = await requireUser();
@@ -188,7 +188,7 @@ export async function revertToDefaultWeights(): Promise<RefitActionResult> {
     return {
       ok: true,
       state: "declined",
-      message: "Back to AdMirror's own weighting. Your results are still on file if you want to fit it again.",
+      message: "Back to IOAA.AI's own weighting. Your results are still on file if you want to fit it again.",
     };
   } catch (error) {
     return fail(error);

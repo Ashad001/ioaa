@@ -10,7 +10,7 @@
  * checked, and — crucially — can't refuse itself for thin volume. The whole
  * "not enough views to say" protection depends on knowing the view count.
  *
- * The video boxes are optional and marked so. Without them AdMirror can still
+ * The video boxes are optional and marked so. Without them IOAA.AI can still
  * tell you whether the ad worked; it cannot tell you WHICH PART of it worked, and
  * the panel says exactly that rather than quietly guessing.
  */
@@ -188,7 +188,7 @@ export function ReportForm({
           <span className="min-w-0 truncate">{pending ? "Filing…" : "File these numbers"}</span>
         </Button>
         <p className="min-w-0 flex-1 text-[11.5px] leading-relaxed text-muted-foreground">
-          Under {MIN_IMPRESSIONS_FOR_DIAGNOSIS.toLocaleString("en-GB")} views AdMirror files
+          Under {MIN_IMPRESSIONS_FOR_DIAGNOSIS.toLocaleString("en-GB")} views IOAA.AI files
           the reading and says it&rsquo;s too early to draw anything from — it won&rsquo;t
           invent a verdict to fill the space.
         </p>

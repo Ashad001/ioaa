@@ -5,7 +5,7 @@
  * against.
  *
  * WHY THIS PANEL EXISTS AT ALL. A 22% hold rate is strong in one account and
- * weak in another, so an absolute rate cannot produce a verdict. AdMirror has
+ * weak in another, so an absolute rate cannot produce a verdict. IOAA.AI has
  * exactly two honest comparisons available: the averages the user types here, and
  * the middle of the user's own other ads. It has NO third option — there is no
  * industry benchmark it could know, and inventing one would be the same sin as
@@ -72,7 +72,7 @@ export function BaselinePanel({
       <div className="min-w-0 px-4 py-4">
         <p className="max-w-[58ch] text-[12.5px] leading-relaxed text-muted-foreground">
           Type your account&rsquo;s own averages and every reading gets indexed against
-          them. Leave them blank and AdMirror compares against the middle of your own
+          them. Leave them blank and IOAA.AI compares against the middle of your own
           other ads instead — it will never compare you to an industry figure, because
           there isn&rsquo;t one it could honestly know.
         </p>

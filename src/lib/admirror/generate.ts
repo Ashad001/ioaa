@@ -364,7 +364,7 @@ export function runGates(input: {
     ? {
         name: "Message match",
         state: "warn",
-        detail: `Check that ${input.destination} opens on the same promise this ad makes. AdMirror never fetches a page, so this one is yours to eyeball — a mismatch here costs more than any creative choice.`,
+        detail: `Check that ${input.destination} opens on the same promise this ad makes. IOAA.AI never fetches a page, so this one is yours to eyeball — a mismatch here costs more than any creative choice.`,
       }
     : {
         name: "Message match",
@@ -426,6 +426,6 @@ export function buildTestPlan(input: { brief: AngleBrief; variants: HookVariant[
           : `Opening beat only: ${variant.hookLine}`,
     })),
     honestyNote:
-      "AdMirror can't tell you how a competitor's ad performed, and it won't guess at yours. Once these run in your account, the numbers come from there.",
+      "IOAA.AI can't tell you how a competitor's ad performed, and it won't guess at yours. Once these run in your account, the numbers come from there.",
   };
 }

@@ -311,12 +311,12 @@ export default async function RunConsolePage({ params }: { params: Promise<{ id:
               <Panel label="Where this comes from">
                 <div className="px-4 py-4">
                   <p className="text-[12.5px] leading-relaxed text-foreground/85">
-                    AdMirror reads the public Meta Ad Library itself — the same pages anyone can
+                    IOAA.AI reads the public Meta Ad Library itself — the same pages anyone can
                     open without an account — and takes the artwork, the copy, the call to action
                     and the date each ad started running.
                   </p>
                   <p className="mt-2.5 text-[12px] leading-relaxed text-muted-foreground">
-                    Meta publishes no spend, click or conversion figures for these ads, so AdMirror
+                    Meta publishes no spend, click or conversion figures for these ads, so IOAA.AI
                     shows none. It does publish a reach range on some ads — where it exists you see
                     it as the range Meta gave, never narrowed to one number, and where it doesn&rsquo;t
                     the row says so instead of showing a zero.

@@ -4,7 +4,7 @@
  * IMPORT RIVAL ADS FROM THE USER'S OWN BROWSER — the no-key route.
  *
  * WHY THIS EXISTS. Meta blocks datacentre reads of the Ad Library, and in some
- * countries the official API cannot be used at all. When AdMirror's own reader is
+ * countries the official API cannot be used at all. When IOAA.AI's own reader is
  * not connected, that used to be the end of the road for collection. It isn't:
  * the user's browser can open the same public page any person can open. So they
  * open the search, copy the page, and paste it here — and the ads land in exactly

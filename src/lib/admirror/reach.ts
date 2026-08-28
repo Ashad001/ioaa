@@ -46,7 +46,7 @@ export function readReach(
     return {
       published: false,
       short: "Reach not published",
-      full: "Meta publishes no reach figure for this ad, so AdMirror shows none. This says nothing about how the ad is performing.",
+      full: "Meta publishes no reach figure for this ad, so IOAA.AI shows none. This says nothing about how the ad is performing.",
     };
   }
 
@@ -54,7 +54,7 @@ export function readReach(
     return {
       published: true,
       short: `${compact(low)}–${compact(high)}`,
-      full: `Meta publishes this ad's reach as ${compact(low)}–${compact(high)} people. That range is Meta's own, reproduced exactly — AdMirror does not narrow it to a single number.`,
+      full: `Meta publishes this ad's reach as ${compact(low)}–${compact(high)} people. That range is Meta's own, reproduced exactly — IOAA.AI does not narrow it to a single number.`,
     };
   }
 

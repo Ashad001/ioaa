@@ -3,7 +3,7 @@
 /**
  * S3-A — the searches this run swept, and the escape hatch.
  *
- * AdMirror runs these searches itself, so this pane is mostly a record of WHERE
+ * IOAA.AI runs these searches itself, so this pane is mostly a record of WHERE
  * the ads on the board came from. The Open button still matters: it lets the user
  * check our reading against the real page, which is the only way to trust it.
  * `rel="noopener noreferrer"` on every one of them.
@@ -131,7 +131,7 @@ export function SavedSearches({
 
               {!row.parsed ? (
                 <p className="mt-2 text-[11px] leading-relaxed text-muted-foreground">
-                  Saved as a plain reference — AdMirror couldn&rsquo;t read the filters, but the link still
+                  Saved as a plain reference — IOAA.AI couldn&rsquo;t read the filters, but the link still
                   works.
                 </p>
               ) : null}
@@ -190,7 +190,7 @@ export function SavedSearches({
           <div className="mt-2.5 rounded-sm border border-border bg-card/60 px-3 py-2.5">
             {preview.ok ? (
               <>
-                <Plate className="block">Filters AdMirror read</Plate>
+                <Plate className="block">Filters IOAA.AI read</Plate>
                 <p className="tabular mt-1 text-[12px] leading-relaxed text-foreground/85">
                   {preview.summary}
                 </p>

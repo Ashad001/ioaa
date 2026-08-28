@@ -1,5 +1,5 @@
 /**
- * <Metric> — the only way a number or a captured fact is rendered in AdMirror.
+ * <Metric> — the only way a number or a captured fact is rendered in IOAA.AI.
  *
  * `provenance` is a REQUIRED prop with no default. That is deliberate and it is
  * the mechanism, not a style choice: a fact whose origin nobody declared cannot

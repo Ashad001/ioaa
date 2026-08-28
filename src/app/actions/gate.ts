@@ -100,7 +100,7 @@ export async function forceGeneration(input: {
       return {
         ok: false,
         error:
-          "Coverage is thin. You can still proceed — tick “Generate anyway” and AdMirror will record that this angle came from a partial view.",
+          "Coverage is thin. You can still proceed — tick “Generate anyway” and IOAA.AI will record that this angle came from a partial view.",
       };
     }
 

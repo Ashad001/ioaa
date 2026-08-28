@@ -3,7 +3,7 @@
 /**
  * THE FETCH TICKER — what is being read, right now, counted.
  *
- * This is the panel the user watches while AdMirror reads the Library. Two rules
+ * This is the panel the user watches while IOAA.AI reads the Library. Two rules
  * decide everything about it:
  *
  * 1. EVERY NUMBER HERE WAS COUNTED. The big figure is ads actually read off

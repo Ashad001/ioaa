@@ -2,7 +2,7 @@
  * The closed loop's arithmetic: turning a user's own reported numbers into a
  * funnel diagnosis, and refusing to give one when the numbers are too thin.
  *
- * WHY THIS FILE IS THE OPPOSITE HALF OF THE APP. Everywhere else, AdMirror is
+ * WHY THIS FILE IS THE OPPOSITE HALF OF THE APP. Everywhere else, IOAA.AI is
  * careful never to claim a performance figure, because the public Ad Library
  * publishes none. Here the figures are real — but they belong to the user, about
  * their own ad, on their own account, read off their own dashboard. That is the
@@ -27,7 +27,7 @@ export const MIN_DAYS_FOR_DIAGNOSIS = 3;
 export const MIN_N_FOR_PATTERN = 5;
 
 export const THIN_DATA_RULE =
-  `A verdict needs at least ${MIN_IMPRESSIONS_FOR_DIAGNOSIS.toLocaleString("en-GB")} views and ${MIN_DAYS_FOR_DIAGNOSIS} days running. Below that AdMirror says so and stops, because a confident story told about noise is worse than no story.`;
+  `A verdict needs at least ${MIN_IMPRESSIONS_FOR_DIAGNOSIS.toLocaleString("en-GB")} views and ${MIN_DAYS_FOR_DIAGNOSIS} days running. Below that IOAA.AI says so and stops, because a confident story told about noise is worse than no story.`;
 
 export const PATTERN_THIN_RULE =
   `A pattern needs ${MIN_N_FOR_PATTERN} measured ads before it shows a number. Under that the cell stays empty rather than showing something believable built on two or three ads.`;
@@ -187,7 +187,7 @@ export const NO_BASELINE: Baseline = {
   costPerResult: null,
   basis: "none",
   basisNote:
-    "No account averages yet, so nothing here is indexed. Add your own averages, or ship a few more and AdMirror will compare against the middle of your own ads.",
+    "No account averages yet, so nothing here is indexed. Add your own averages, or ship a few more and IOAA.AI will compare against the middle of your own ads.",
 };
 
 function pct(input: string | null | undefined): number | null {
@@ -410,7 +410,7 @@ export function diagnose(input: {
     return {
       ...base,
       verdict: "insufficient_data",
-      refusal: `${impressions.toLocaleString("en-GB")} views isn't enough to read anything into. AdMirror waits for ${MIN_IMPRESSIONS_FOR_DIAGNOSIS.toLocaleString("en-GB")} — below that the swings are noise, and a confident answer here would be made up.`,
+      refusal: `${impressions.toLocaleString("en-GB")} views isn't enough to read anything into. IOAA.AI waits for ${MIN_IMPRESSIONS_FOR_DIAGNOSIS.toLocaleString("en-GB")} — below that the swings are noise, and a confident answer here would be made up.`,
       stage: "unknown",
       reading: [],
       angleVerdict: "cannot_say",
@@ -435,7 +435,7 @@ export function diagnose(input: {
       ...base,
       verdict: "insufficient_data",
       refusal:
-        "There's nothing to compare this to yet. An absolute rate says nothing on its own — add your own account averages, or ship a few more ads, and AdMirror can index this against your normal.",
+        "There's nothing to compare this to yet. An absolute rate says nothing on its own — add your own account averages, or ship a few more ads, and IOAA.AI can index this against your normal.",
       stage: "unknown",
       reading: [
         `Views ${impressions.toLocaleString("en-GB")} · scroll-stop ${fmtPct(rates.thumbstop)} · held to three-quarters ${fmtPct(rates.hold)} · clicks ${fmtPct(rates.click)}.`,

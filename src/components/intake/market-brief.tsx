@@ -19,7 +19,7 @@ export function MarketBrief() {
         Find the angle your market is using right now.
       </h1>
       <p className="mt-5 max-w-[56ch] text-[14.5px] leading-relaxed text-muted-foreground">
-        Start with your website. AdMirror maps the advertisers around you, keeps the proof with each finding, and helps you turn a selected angle into original creative.
+        Start with your website. IOAA.AI maps the advertisers around you, keeps the proof with each finding, and helps you turn a selected angle into original creative.
       </p>
 
       <div className="mt-9 overflow-hidden rounded-md border border-border bg-card">
@@ -54,7 +54,7 @@ export function MarketBrief() {
       </div>
 
       <p className="mt-3 max-w-[60ch] text-[11.5px] leading-relaxed text-muted-foreground">
-        Meta only publishes selected reach ranges. AdMirror does not estimate spend, clicks, sales, or a performance score.
+        Meta only publishes selected reach ranges. IOAA.AI does not estimate spend, clicks, sales, or a performance score.
       </p>
     </div>
   );

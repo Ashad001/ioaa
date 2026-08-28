@@ -78,7 +78,7 @@ export default async function WatchtowerIndexPage() {
             <div className="max-w-[58ch] py-8">
               <Plate className="block">Nothing on watch yet</Plate>
               <p className="mt-2 text-[13.5px] leading-relaxed text-muted-foreground">
-                A market you swept once is a photograph. Put it on watch and AdMirror
+                A market you swept once is a photograph. Put it on watch and IOAA.AI
                 reminds you when it&rsquo;s worth sweeping again, then writes what changed —
                 and what that change does not prove.
               </p>
@@ -219,7 +219,7 @@ export default async function WatchtowerIndexPage() {
               ) : null}
 
               <p className="max-w-[70ch] px-1 pt-1 text-[11.5px] leading-relaxed text-muted-foreground">
-                A watch schedules a reminder, never a background fetch. Nothing in AdMirror
+                A watch schedules a reminder, never a background fetch. Nothing in IOAA.AI
                 wakes up and asks Meta for anything — you press sweep, and the reading is of
                 the public Ad Library at that moment.
               </p>

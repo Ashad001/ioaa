@@ -68,7 +68,7 @@ export function TestPlanRounds({ plan }: { plan: RoundedTestPlan }) {
               <div className="min-w-0">
                 <Plate className="block">Budget per cell</Plate>
                 <p className="mt-1 text-[12px] leading-relaxed text-muted-foreground">
-                  {round.dailyBudgetPerVariant ?? "Not captured — your account holds this, not AdMirror."}
+                  {round.dailyBudgetPerVariant ?? "Not captured — your account holds this, not IOAA.AI."}
                 </p>
               </div>
               <div className="min-w-0">

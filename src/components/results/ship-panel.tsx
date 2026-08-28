@@ -8,7 +8,7 @@
  * which borrowed angle produced it — which is exactly the knowledge the pattern
  * library is made of.
  *
- * It is a manual press, and that is not a shortcut. AdMirror holds no access to
+ * It is a manual press, and that is not a shortcut. IOAA.AI holds no access to
  * anyone's ad account: it cannot publish, cannot pause, and cannot see what went
  * live. A button that claimed to launch would be the one dishonest control in the
  * product.
@@ -77,7 +77,7 @@ export function ShipPanel({
     >
       <div className="min-w-0 px-4 py-4">
         <p className="max-w-[70ch] text-[12.5px] leading-relaxed text-muted-foreground">
-          You launch in your own ads manager — AdMirror has no access to your account and
+          You launch in your own ads manager — IOAA.AI has no access to your account and
           never will. Mark what you ran here, then come back with the numbers and it will
           tell you which part of the ad did the work.
         </p>

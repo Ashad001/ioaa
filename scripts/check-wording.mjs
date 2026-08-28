@@ -424,7 +424,7 @@ if (loopFailures.length > 0) {
 /* ──────────────────────────────────────────────────────────────────────────────
  * THE WEIGHT RE-FIT'S TWO PROMISES, ASSERTED
  *
- * The re-fit is the only feature that changes AdMirror's own arithmetic, so it
+ * The re-fit is the only feature that changes IOAA.AI's own arithmetic, so it
  * carries the two promises most worth breaking under pressure: it shows nothing
  * below the sample threshold, and it never applies itself. Both are enforced in
  * code paths a future edit could quietly undo, so both are executed here.
@@ -555,14 +555,14 @@ if (fitted.enough) {
 
 // 6. A merely PROPOSED vector is inert: the live weighting is read from the
 //    accepted row only, so with nothing accepted the ranking must fall back to
-//    AdMirror's own weighting. This is the never-auto-apply guarantee.
+//    IOAA.AI's own weighting. This is the never-auto-apply guarantee.
 requireThat(
   parseWeights(null) === null && parseWeights("") === null,
   "An absent stored weighting did not read as absent, so the ranking could silently run on something nobody accepted.",
 );
 requireThat(
   isDefaultWeights({ ...EBOS_WEIGHTS }),
-  "AdMirror's own weighting did not recognise itself as the default, so the screen cannot tell the user which weighting is running.",
+  "IOAA.AI's own weighting did not recognise itself as the default, so the screen cannot tell the user which weighting is running.",
 );
 
 // 7. A half-written or hand-edited vector is refused outright rather than

@@ -45,19 +45,19 @@ export const PROVENANCE_META: Record<
     short: "META",
     label: "Published by Meta",
     explain:
-      "Meta itself publishes this figure in its Ad Library. It is the only number in AdMirror about how much an ad is being seen, it is reproduced exactly as published, and it is shown ONLY on the ads that carry one — never estimated, never filled in for the rest.",
+      "Meta itself publishes this figure in its Ad Library. It is the only number in IOAA.AI about how much an ad is being seen, it is reproduced exactly as published, and it is shown ONLY on the ads that carry one — never estimated, never filled in for the rest.",
   },
   swept_from_public_library: {
     short: "LIB",
     label: "Read from the public Ad Library",
     explain:
-      "AdMirror read this out of the public Ad Library on the date shown. Nobody typed it. Meta publishes no spend, click or conversion figure for commercial ads, so none appears here — only the reach it does publish, on the ads that carry one.",
+      "IOAA.AI read this out of the public Ad Library on the date shown. Nobody typed it. Meta publishes no spend, click or conversion figure for commercial ads, so none appears here — only the reach it does publish, on the ads that carry one.",
   },
   read_in_your_browser: {
     short: "BROW",
     label: "Read from the Library page in your browser",
     explain:
-      "You opened the public Ad Library yourself and AdMirror read this straight off the page you copied. Nobody typed it and nothing was estimated \u2014 a field the page did not show stays empty. Meta publishes no spend, click or conversion figure for commercial ads, so none appears here either.",
+      "You opened the public Ad Library yourself and IOAA.AI read this straight off the page you copied. Nobody typed it and nothing was estimated \u2014 a field the page did not show stays empty. Meta publishes no spend, click or conversion figure for commercial ads, so none appears here either.",
   },
   user_asserted: {
     short: "YOU",
@@ -67,7 +67,7 @@ export const PROVENANCE_META: Record<
   derived_from_evidence: {
     short: "DER",
     label: "Derived from your evidence",
-    explain: "Computed by AdMirror from what you submitted.",
+    explain: "Computed by IOAA.AI from what you submitted.",
   },
   model_interpretation: {
     short: "READ",
@@ -77,7 +77,7 @@ export const PROVENANCE_META: Record<
   unknown: {
     short: "—",
     label: "Not captured",
-    explain: "Nobody captured this, so AdMirror shows nothing rather than a zero.",
+    explain: "Nobody captured this, so IOAA.AI shows nothing rather than a zero.",
   },
 };
 

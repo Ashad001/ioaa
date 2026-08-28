@@ -57,7 +57,7 @@ export function SignInPanel() {
     <div className="panel w-full max-w-[380px] rounded-sm">
       <div className="flex items-center gap-2.5 border-b border-border px-5 py-3.5">
         <Lamp state="hold" />
-        <Plate className="text-foreground">Sign in to AdMirror</Plate>
+        <Plate className="text-foreground">Sign in to IOAA.AI</Plate>
       </div>
 
       <div className="px-5 py-5">

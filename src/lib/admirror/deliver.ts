@@ -170,7 +170,7 @@ export function buildBrief(input: {
   const out: string[] = [];
 
   out.push(`${run.brandName} — ${run.marketLabel}`);
-  out.push("Creative handoff from AdMirror");
+  out.push("Creative handoff from IOAA.AI");
   out.push("");
   out.push(COVERAGE_STATEMENT);
   if (input.batch) {

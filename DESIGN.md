@@ -1,5 +1,5 @@
 ---
-name: "AdMirror"
+name: "IOAA.AI"
 colors:
   background: "oklch(0.132 0.01 260)"
   foreground: "oklch(0.949 0.006 180)"

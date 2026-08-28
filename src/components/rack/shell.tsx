@@ -34,7 +34,7 @@ export function RackShell({
             <span className="flex size-6 items-center justify-center rounded-[4px] border border-primary/45 bg-primary/10">
               <Activity size={14} strokeWidth={2.1} />
             </span>
-            <span className="text-[16px] font-semibold tracking-[-0.055em]">AdMirror</span>
+            <span className="text-[16px] font-semibold tracking-[-0.055em]">IOAA.AI</span>
           </Link>
           <nav aria-label="Main" className="hidden min-w-0 items-center gap-4 border-l border-border pl-4 md:flex">
             {MARKET_LINKS.map((link) => (
@@ -162,3 +162,6 @@ export function StepRail({
     </nav>
   );
 }
+            <span className="text-[16px] font-semibold tracking-[-0.045em]">
+              IOAA<span className="text-primary/60">.AI</span>
+            </span>

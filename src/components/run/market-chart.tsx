@@ -7,7 +7,7 @@
  *
  * 1. SHARE OF THE SHEET — how many collected ads each advertiser accounts for.
  *    This is emphatically NOT share of voice or share of spend: it is share of
- *    what AdMirror managed to read, and the caption says so. Conflating the two
+ *    what IOAA.AI managed to read, and the caption says so. Conflating the two
  *    would be the single most tempting lie this product could tell.
  * 2. WHEN THEIR ADS STARTED — the visible "Started running" dates, bucketed by
  *    month. It shows whether a market is refreshing creative or coasting.

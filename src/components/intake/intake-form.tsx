@@ -122,7 +122,7 @@ export function IntakeForm({ readerConnected = true }: { readerConnected?: boole
                     className="h-12 font-mono text-[15px]"
                   />
                   <p className="text-[11.5px] leading-relaxed text-muted-foreground">
-                    This gives AdMirror the product category and market terms for the first pass.
+                    This gives IOAA.AI the product category and market terms for the first pass.
                   </p>
                 </div>
 
@@ -212,7 +212,7 @@ export function IntakeForm({ readerConnected = true }: { readerConnected?: boole
             <div className="mt-4 flex min-w-0 items-start gap-3 border border-primary/20 bg-primary/[0.055] px-3.5 py-3">
               <ScanSearch size={15} strokeWidth={1.6} className="mt-0.5 shrink-0 text-film-edge" />
               <p className="min-w-0 text-[12.5px] leading-relaxed text-foreground/85">
-                Named companies are checked directly. The public Ad Library supplies the copy, creative, start date, and any reach range it publishes. AdMirror does not fill in anything else.
+                Named companies are checked directly. The public Ad Library supplies the copy, creative, start date, and any reach range it publishes. IOAA.AI does not fill in anything else.
               </p>
             </div>
           </form>

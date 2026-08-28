@@ -2,7 +2,7 @@
  * Reading the clock, in one place.
  *
  * A reminder date is "due" or it is not, and that is the only time question
- * AdMirror asks. Keeping the read here means no screen reaches for the clock
+ * IOAA.AI asks. Keeping the read here means no screen reaches for the clock
  * while it is drawing itself.
  */
 

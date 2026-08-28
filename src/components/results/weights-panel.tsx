@@ -5,7 +5,7 @@
  * argue for instead.
  *
  * WHY THIS SCREEN LOOKS LIKE A DECISION AND NOT A SETTING. Everything else in
- * AdMirror is either evidence or a refusal. This is the one place where the app
+ * IOAA.AI is either evidence or a refusal. This is the one place where the app
  * has an opinion about its own arithmetic, so it has to show the whole argument:
  * the five weights before, the five after, how many of the user's ads voted, how
  * consistent the pattern was, and the sentence about what a correlation across
@@ -50,7 +50,7 @@ import { cn } from "@/lib/utils";
 export type WeightsPanelData = {
   /** The vector the ranking is using right now. */
   active: EbosWeights;
-  /** True when that is AdMirror's own shipped weighting rather than a fitted one. */
+  /** True when that is IOAA.AI's own shipped weighting rather than a fitted one. */
   activeIsDefault: boolean;
   /** When the live weighting was accepted, already formatted server-side. */
   activeSince: string | null;
@@ -112,7 +112,7 @@ export function WeightsPanel({ data }: { data: WeightsPanelData }) {
       <div className="min-w-0 px-4 py-4">
         <p className="max-w-[58ch] text-[12.5px] leading-relaxed text-muted-foreground">
           The opportunity score is five things about a collected ad, added up in
-          proportions AdMirror chose. Once enough of your own ads have real results
+          proportions IOAA.AI chose. Once enough of your own ads have real results
           behind them, those proportions can be fitted to what actually worked for you
           instead — and only if you say so.
         </p>
@@ -124,7 +124,7 @@ export function WeightsPanel({ data }: { data: WeightsPanelData }) {
             <Plate className="block">In use now</Plate>
             <EdgeCode>
               {data.activeIsDefault
-                ? "AdMirror's own weighting"
+                ? "IOAA.AI's own weighting"
                 : `Fitted to you${data.activeSince ? ` · ${data.activeSince}` : ""}`}
             </EdgeCode>
           </div>
@@ -158,7 +158,7 @@ export function WeightsPanel({ data }: { data: WeightsPanelData }) {
               onClick={() => run(revertToDefaultWeights)}
             >
               <Undo2 size={13} strokeWidth={1.7} />
-              <span className="min-w-0 truncate">Go back to AdMirror&rsquo;s weighting</span>
+              <span className="min-w-0 truncate">Go back to IOAA.AI&rsquo;s weighting</span>
             </Button>
           ) : null}
         </div>
@@ -178,7 +178,7 @@ export function WeightsPanel({ data }: { data: WeightsPanelData }) {
             <p className="mt-1.5 max-w-[58ch] text-[12.5px] leading-relaxed text-muted-foreground">
               {data.usable} of your own ads have {MIN_DAYS_FOR_REFIT}+ days of results and a
               traceable source angle — enough to compare what the score saw against what
-              your ads actually cost. AdMirror will show you the proposed weighting and
+              your ads actually cost. IOAA.AI will show you the proposed weighting and
               change nothing until you accept it.
             </p>
             <Button
@@ -195,7 +195,7 @@ export function WeightsPanel({ data }: { data: WeightsPanelData }) {
           <div className="mt-4 min-w-0 border-t border-border/70 pt-4">
             <Plate className="block">Not enough to fit yet</Plate>
             <p className="mt-1.5 max-w-[58ch] text-[12.5px] leading-relaxed text-foreground/85">
-              {missing} more of your own ads need results before AdMirror will propose a
+              {missing} more of your own ads need results before IOAA.AI will propose a
               different weighting.
               {data.tooYoung > 0
                 ? ` ${data.tooYoung} you've already reported are still too new to count, so part of that gap closes on its own.`

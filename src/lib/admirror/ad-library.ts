@@ -103,7 +103,7 @@ export type SearchSpec = {
  *
  * A note on `sort_data[mode]`: a sort request in a Library URL is a UI-side
  * instruction about ordering. It does NOT mean the results expose per-ad figures,
- * and the order that comes back is not a performance number. AdMirror never
+ * and the order that comes back is not a performance number. IOAA.AI never
  * writes one into a search and never reads order as a metric — only as "where
  * this appeared in the result order you captured", if the user tells us.
  */

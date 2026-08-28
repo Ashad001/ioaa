@@ -81,7 +81,7 @@ export default async function PatternsPage() {
               <div className="max-w-[64ch] px-4 py-6">
                 <p className="text-[13.5px] leading-relaxed text-foreground/85">
                   This is the asset no single run can produce: after enough shipped ads,
-                  AdMirror can tell you that a particular kind of hook has actually held up
+                  IOAA.AI can tell you that a particular kind of hook has actually held up
                   in your category and market — from your own results, not from anybody&rsquo;s
                   case study.
                 </p>
