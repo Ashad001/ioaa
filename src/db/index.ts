@@ -36,18 +36,27 @@ let instance: Database | null = null;
 /**
  * The app's connection string.
  *
- * `IMAGINE_DATABASE_URL` is checked FIRST and is not cosmetic. The environment
- * this app is built in already defines `DATABASE_URL` for a local database of its
- * own, and Next.js gives the process environment precedence over `.env` — so
+ * `SUPABASE_DATABASE_URL` is checked FIRST: this app's data lives in the owner's
+ * own Supabase project, and that variable is the one the owner supplies. Until it
+ * is set the app keeps running on the platform-provided database, so the
+ * switch-over is a paste rather than an outage.
+ *
+ * `IMAGINE_DATABASE_URL` comes next and is not cosmetic. The environment this app
+ * is built in already defines `DATABASE_URL` for a local database of its own, and
+ * Next.js gives the process environment precedence over the environment file — so
  * reading `DATABASE_URL` alone silently connects the app to the wrong database
  * while migrations go to the right one. That failure looks like a working app
  * until the data is gone.
  *
- * `DATABASE_URL` remains the fallback so the app still runs anywhere you deploy
- * it with the conventional variable set.
+ * `DATABASE_URL` remains the last fallback so the app still runs anywhere you
+ * deploy it with the conventional variable set.
  */
 function connectionUrl(): string | undefined {
-  return process.env.IMAGINE_DATABASE_URL ?? process.env.DATABASE_URL;
+  return (
+    process.env.SUPABASE_DATABASE_URL ??
+    process.env.IMAGINE_DATABASE_URL ??
+    process.env.DATABASE_URL
+  );
 }
 
 function connect(): Database {
@@ -94,13 +103,31 @@ export const db = new Proxy({} as Database, {
  *  branch at build time or to render an honest "not configured" state. */
 export const hasDatabase = (): boolean => Boolean(connectionUrl());
 
+/** True when the app is reading the owner's own Supabase project rather than the
+ *  platform-provided database. Used only for honest reporting — no query path
+ *  branches on it. */
+export const usingOwnDatabase = (): boolean =>
+  Boolean(process.env.SUPABASE_DATABASE_URL);
+
 /** Unpooled URL for schema operations. Falls back to the pooled one so a missing
  *  direct URL degrades to "migrations work, just less reliably" rather than
- *  "migrations crash". */
-export const directUrl = (): string =>
-  process.env.IMAGINE_DATABASE_URL_UNPOOLED ??
-  process.env.DATABASE_URL_UNPOOLED ??
-  connectionUrl() ??
-  "";
+ *  "migrations crash".
+ *
+ *  For Supabase the owner pastes ONE string — the pooled one on port 6543. The
+ *  session-level endpoint is the same host on 5432, so it is derived rather than
+ *  asked for twice: a schema change needs a session connection that the
+ *  transaction pooler cannot give it. */
+export const directUrl = (): string => {
+  const supplied =
+    process.env.SUPABASE_DATABASE_URL_UNPOOLED ??
+    process.env.IMAGINE_DATABASE_URL_UNPOOLED ??
+    process.env.DATABASE_URL_UNPOOLED;
+  if (supplied) return supplied;
+
+  const pooled = process.env.SUPABASE_DATABASE_URL;
+  if (pooled) return pooled.replace(":6543/", ":5432/");
+
+  return connectionUrl() ?? "";
+};
 
 export { schema };

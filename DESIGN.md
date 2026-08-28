@@ -1,6 +1,5 @@
 ---
 name: "AdMirror"
-description: "A competitive-creative engine for paid social: give it your website, it reads what you sell and the field you’re in, builds an evidence-backed profile of your direct and adjacent competitors from their live Meta ads, ranks observed signals without inventing performance, and turns the angle you pick into three original variants and a test plan."
 colors:
   background: "oklch(0.132 0.01 260)"
   foreground: "oklch(0.949 0.006 180)"
