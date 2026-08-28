@@ -1,5 +1,21 @@
 # IOAA.AI
 
+**Latest build note:** Sign-in now lives ON the front door, and the scene carries the PRODUCT's copy instead of the placeholder energy-company text.
+
+Two faults fixed first: `src/app/page.tsx` no longer imports a local `./scene.css` (those two `:has([data-scene-root])` rules now sit at the END of `src/app/globals.css`, no new `:root`), and the turbopack dev cache that still held the stale module graph (`.next/dev/cache/turbopack`, plus the orphan `src_app_scene_*.css` chunks) was cleared — that cache, not the source, was what kept re-reporting `Module not found: Can't resolve './scene.css'` on `/` AND `/start`.
+
+New `src/components/scene/scene-sign-in.tsx` — email+password, magic link, and Google (only when `googleSignInEnabled`) in the scene's own vocabulary: square white plate, 1px navy edge, underline-only fields, uppercase tracked labels. It is the third beat of the scroll scene. `active` (s3Opacity > 0.6) gates `pointer-events` so an invisible form never swallows scroll. Success → `/start`.
+
+`src/app/page.tsx` is now async: reads `getUser()` + `googleSignInEnabled` and passes `signedIn` / `googleEnabled` down. A signed-in visitor gets "Open your workspace" → `/start` in place of the form (no redirect, the scene still plays). Metadata title/description are the product's.
+
+`src/app/start/page.tsx` is intake ONLY — `if (!user) redirect("/")`. Every signed-out guard across library, patterns, results, watch and all `runs/[id]/*` now redirects to `/` (13 sites) so there is exactly one sign-in surface. `src/components/auth/sign-in-panel.tsx` deleted. `MarketBrief` is left in place but currently unrendered.
+
+Scene copy: beat 1 "See the ads your market is running right now" + the intake paragraph; beat 2 "Nothing is read until you approve the rival list" over a 4-step strip (site → approve rivals → read live ads → turn an angle into your own) with the no-spend/no-clicks/no-score disclaimer; beat 3 the sign-in. `SceneNav` lost the five fictional `VECTRUS` names — it is now the wordmark plus three real section buttons that scroll the scrub track via `toBeat(fraction)`. Every arrow button on the page moves the scroll to a named beat; nothing is decorative. Scrub engine and beat timings untouched.
+
+Supabase project `nunkiwiwzodhgxkwpkpz` (`admirror`, us-east-1, ACTIVE_HEALTHY) remains the live source of truth — 25 tables, more data than the platform database. Do not fall back to `IMAGINE_DATABASE_URL`. The pooler/SSL rewrite in `src/db/index.ts` + `drizzle.config.ts` stands (direct `db.<ref>` endpoint is IPv6-only and unreachable here).
+
+# IOAA.AI
+
 **Latest build note:** The front page was rendering blank because it pulled in a separate stylesheet next to it (`src/app/scene.css`) that the dev server's module graph had gone stale on after the file moved out of the deleted `src/app/scene/` folder — `Module not found: Can't resolve './scene.css'` on every request. Fixed by deleting that one-off stylesheet and appending its two rules to the end of `src/app/globals.css`, still scoped with `html:has([data-scene-root])` / `body:has([data-scene-root])` so smooth scrolling and the white ground apply only while the scene is on screen and never leak into the workspace. `src/app/page.tsx` no longer imports any local CSS. No new `:root` block; palette untouched.
 
 # IOAA.AI

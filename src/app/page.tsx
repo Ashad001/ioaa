@@ -1,10 +1,15 @@
 /**
- * "Scroll Tied Video Section" — the site's front door.
+ * "IOAA.AI" — the site's front door.
  *
  * A standalone cinematic one-page scene, deliberately outside the app shell: no
  * rack header, no nav rail, no tokens from the workspace palette. It is its own
  * site, and the only thing it shares with the rest of the project is the runtime.
  * The workspace itself lives at /start.
+ *
+ * Signing in happens IN the scene's last beat rather than on a page of its own,
+ * so the session is read here and handed down: a visitor who is already signed in
+ * is offered the workspace instead of a form they do not need. The Google button
+ * only appears when the platform actually has that provider wired.
  *
  * The typeface is loaded with a plain <link> that React hoists into <head>, and it
  * is applied to this subtree only — the workspace keeps its own type. The scene's
@@ -14,13 +19,17 @@
 import type { Metadata } from "next";
 
 import { ScrollScene } from "@/components/scene/scroll-scene";
+import { getUser, googleSignInEnabled } from "@/lib/auth";
 
 export const metadata: Metadata = {
-  title: { absolute: "Scroll Tied Video Section" },
-  description: "Advancing resources for a cleaner future.",
+  title: { absolute: "IOAA.AI — see the ads your market is running" },
+  description:
+    "Competitive ad intelligence read from what advertisers actually publish. Map the rivals around your website, keep the live ad beside every finding, and turn a chosen angle into original creative.",
 };
 
-export default function HomePage() {
+export default async function HomePage() {
+  const user = await getUser();
+
   return (
     <>
       <link
@@ -34,7 +43,7 @@ export default function HomePage() {
             "'Helvetica Neue ME', 'Helvetica Neue', Helvetica, Arial, sans-serif",
         }}
       >
-        <ScrollScene />
+        <ScrollScene signedIn={Boolean(user)} googleEnabled={googleSignInEnabled} />
       </div>
     </>
   );

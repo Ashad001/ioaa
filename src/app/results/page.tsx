@@ -54,7 +54,7 @@ function stamp(date: Date | null) {
 
 export default async function ResultsPage() {
   const user = await getUser();
-  if (!user) redirect("/start");
+  if (!user) redirect("/");
 
   const [shipped, baselineRow, runs, acceptedRow, openRow, refitSamples] = await Promise.all([
     listShippedForUser(user.id),

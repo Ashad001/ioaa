@@ -26,7 +26,7 @@ const STATUS_COPY: Record<string, { label: string; lamp: "live" | "hold" | "cold
 
 export default async function LibraryPage() {
   const user = await getUser();
-  if (!user) redirect("/start");
+  if (!user) redirect("/");
 
   const [runs, watched] = await Promise.all([
     listRunsForUser(user.id),

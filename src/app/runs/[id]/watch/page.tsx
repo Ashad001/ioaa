@@ -35,7 +35,7 @@ function stamp(date: Date | null) {
 export default async function WatchPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const user = await getUser();
-  if (!user) redirect("/start");
+  if (!user) redirect("/");
 
   const current = await getRun(id, user.id);
   if (!current) notFound();

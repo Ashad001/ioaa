@@ -28,7 +28,7 @@ function stamp(date: Date | null) {
 
 export default async function WatchtowerIndexPage() {
   const user = await getUser();
-  if (!user) redirect("/start");
+  if (!user) redirect("/");
 
   const [watches, runs] = await Promise.all([
     listWatchesForUser(user.id),

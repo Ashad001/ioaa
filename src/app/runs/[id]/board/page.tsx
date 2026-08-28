@@ -37,7 +37,7 @@ type Basis = {
 export default async function BoardPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const user = await getUser();
-  if (!user) redirect("/start");
+  if (!user) redirect("/");
 
   const current = await getRun(id, user.id);
   if (!current) notFound();

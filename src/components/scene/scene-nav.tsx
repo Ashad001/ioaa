@@ -11,28 +11,39 @@
  * Below the large breakpoint the links collapse into a hamburger that opens a
  * full-screen panel; the desk-width row is never allowed to wrap.
  *
- * The five property names are the scene's own fictional copy and carry no
- * destination, so they are rendered as plain type rather than as links that go
- * nowhere. The one real destination on this page is the workspace entry.
+ * The section names carry no destination of their own — this is a one-page front
+ * door — so they scroll the scene to the beat they name rather than pretending to
+ * be routes. "Sign in" goes to the card in the last beat; there is no separate
+ * sign-in page.
  */
 import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { ArrowUpRight, Info, X } from "lucide-react";
+import { ArrowDown, ArrowUpRight, X } from "lucide-react";
 
 const DARK = "#1D3045";
 
-const LINKS = [
-  { label: "VECTRUS ENERGY", active: true },
-  { label: "VECTRUS UPSTREAM", active: false },
-  { label: "VECTRUS MARKETS", active: false },
-  { label: "VECTRUS SYSTEMS", active: false },
-  { label: "VECTRUS+", active: false },
-];
-
-export function SceneNav({ isLight }: { isLight: boolean }) {
+export function SceneNav({
+  isLight,
+  signedIn = false,
+  onSignIn,
+  onBeat,
+}: {
+  isLight: boolean;
+  signedIn?: boolean;
+  onSignIn: () => void;
+  onBeat?: (fraction: number) => void;
+}) {
+  const router = useRouter();
   const [entered, setEntered] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const color = isLight ? "#ffffff" : DARK;
+
+  const SECTIONS = [
+    { label: "What it reads", fraction: 0 },
+    { label: "How it works", fraction: 0.46 },
+    { label: signedIn ? "Your workspace" : "Sign in", fraction: 0.82 },
+  ];
 
   useEffect(() => {
     const timer = window.setTimeout(() => setEntered(true), 200);
@@ -48,6 +59,24 @@ export function SceneNav({ isLight }: { isLight: boolean }) {
     };
   }, [menuOpen]);
 
+  const go = (fraction: number) => {
+    if (fraction >= 0.8) {
+      // The last beat holds the sign-in card. Someone already signed in has no
+      // use for it, so that entry becomes the workspace instead.
+      if (signedIn) {
+        router.push("/start");
+        return;
+      }
+      onSignIn();
+      return;
+    }
+    if (onBeat) {
+      onBeat(fraction);
+      return;
+    }
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  };
+
   const entrance = (index: number) => ({
     opacity: entered ? 1 : 0,
     transform: entered ? "translateY(0)" : "translateY(-12px)",
@@ -61,7 +90,7 @@ export function SceneNav({ isLight }: { isLight: boolean }) {
         className="pointer-events-auto absolute inset-x-0 top-0 z-50 flex items-center justify-between px-6 pt-8 pb-6 sm:px-8 sm:pt-12 md:px-12"
         style={{ color, transition: "color 500ms" }}
       >
-        {/* Mobile: hamburger. Desktop: the five properties. */}
+        {/* Mobile: hamburger. Desktop: the wordmark and the sections. */}
         <button
           type="button"
           aria-label="Open menu"
@@ -75,47 +104,44 @@ export function SceneNav({ isLight }: { isLight: boolean }) {
         </button>
 
         <div className="hidden min-w-0 items-center gap-8 lg:flex xl:gap-10">
-          {LINKS.map((link, index) => (
-            <span
-              key={link.label}
-              className="relative shrink-0 text-xs font-medium uppercase tracking-[0.15em]"
-              style={entrance(index)}
+          <span
+            className="shrink-0 text-xs font-semibold uppercase tracking-[0.22em]"
+            style={entrance(0)}
+          >
+            IOAA.AI
+          </span>
+          {SECTIONS.slice(0, 2).map((item, index) => (
+            <button
+              key={item.label}
+              type="button"
+              onClick={() => go(item.fraction)}
+              className="min-w-0 shrink-0 truncate text-xs font-medium uppercase tracking-[0.15em] transition-opacity hover:opacity-70"
+              style={entrance(index + 1)}
             >
-              {link.label}
-              {link.active ? (
-                <span
-                  aria-hidden
-                  className="absolute -bottom-3 left-0 w-full"
-                  style={{ height: 2, background: color, transition: "background 500ms" }}
-                />
-              ) : null}
-            </span>
+              {item.label}
+            </button>
           ))}
         </div>
 
-        <div className="flex min-w-0 items-center gap-6 sm:gap-8" style={entrance(5)}>
-          <span className="hidden shrink-0 items-center gap-2 text-xs font-medium uppercase tracking-[0.2em] sm:flex">
-            NEWS
-            <span
-              className="flex items-center justify-center rounded-full"
-              style={{
-                width: 20,
-                height: 20,
-                background: color,
-                color: isLight ? DARK : "#ffffff",
-                transition: "background 500ms, color 500ms",
-              }}
+        <div className="flex min-w-0 items-center gap-6 sm:gap-8" style={entrance(4)}>
+          {signedIn ? (
+            <Link
+              href="/start"
+              className="flex min-w-0 shrink-0 items-center gap-1.5 text-xs font-medium uppercase tracking-[0.2em] transition-opacity hover:opacity-70"
             >
-              <Info size={10} strokeWidth={2} />
-            </span>
-          </span>
-          <Link
-            href="/start"
-            className="flex min-w-0 shrink-0 items-center gap-1.5 text-xs font-medium uppercase tracking-[0.2em] transition-opacity hover:opacity-70"
-          >
-            <span className="truncate">IOAA.AI</span>
-            <ArrowUpRight size={13} strokeWidth={1.8} />
-          </Link>
+              <span className="truncate">Your workspace</span>
+              <ArrowUpRight size={13} strokeWidth={1.8} />
+            </Link>
+          ) : (
+            <button
+              type="button"
+              onClick={onSignIn}
+              className="flex min-w-0 shrink-0 items-center gap-1.5 text-xs font-medium uppercase tracking-[0.2em] transition-opacity hover:opacity-70"
+            >
+              <span className="truncate">Sign in</span>
+              <ArrowDown size={13} strokeWidth={1.8} />
+            </button>
+          )}
           <button
             type="button"
             onClick={() => setMenuOpen(true)}
@@ -142,7 +168,10 @@ export function SceneNav({ isLight }: { isLight: boolean }) {
             transition: "transform 500ms cubic-bezier(0.4,0,0.2,1)",
           }}
         >
-          <div className="flex justify-end px-6 pt-8 sm:px-8 sm:pt-12">
+          <div className="flex items-center justify-between px-6 pt-8 sm:px-8 sm:pt-12">
+            <span className="text-xs font-semibold uppercase tracking-[0.22em] text-white">
+              IOAA.AI
+            </span>
             <button
               type="button"
               aria-label="Close menu"
@@ -155,40 +184,31 @@ export function SceneNav({ isLight }: { isLight: boolean }) {
           </div>
 
           <div className="flex min-h-0 flex-1 flex-col justify-center px-8 sm:px-12">
-            {LINKS.map((link, index) => (
-              <span
-                key={link.label}
-                className={`min-w-0 py-3 text-2xl font-light uppercase tracking-wide sm:text-3xl ${
-                  link.active ? "text-white" : "text-white/60"
-                }`}
+            {SECTIONS.map((item, index) => (
+              <button
+                key={item.label}
+                type="button"
+                onClick={() => {
+                  setMenuOpen(false);
+                  go(item.fraction);
+                }}
+                className="min-w-0 truncate py-3 text-left text-2xl font-light uppercase tracking-wide text-white sm:text-3xl"
                 style={{
                   opacity: menuOpen ? 1 : 0,
                   transform: menuOpen ? "translateY(0)" : "translateY(20px)",
                   transition: `opacity 500ms cubic-bezier(0.16,1,0.3,1) ${index * 60}ms, transform 500ms cubic-bezier(0.16,1,0.3,1) ${index * 60}ms`,
                 }}
               >
-                {link.label}
-              </span>
+                {item.label}
+              </button>
             ))}
-
-            <Link
-              href="/start"
-              onClick={() => setMenuOpen(false)}
-              className="mt-8 flex min-w-0 items-center gap-2 py-3 text-2xl font-light uppercase tracking-wide text-white sm:text-3xl"
-              style={{
-                opacity: menuOpen ? 1 : 0,
-                transform: menuOpen ? "translateY(0)" : "translateY(20px)",
-                transition: `opacity 500ms cubic-bezier(0.16,1,0.3,1) ${LINKS.length * 60}ms, transform 500ms cubic-bezier(0.16,1,0.3,1) ${LINKS.length * 60}ms`,
-              }}
-            >
-              <span className="truncate">IOAA.AI</span>
-              <ArrowUpRight size={22} strokeWidth={1.4} />
-            </Link>
           </div>
 
-          <div className="flex items-center gap-8 px-8 pb-10 sm:px-12">
-            <span className="text-xs uppercase tracking-[0.2em] text-white/60">NEWS</span>
-            <span className="text-xs uppercase tracking-[0.2em] text-white/60">CONTACT</span>
+          <div className="px-8 pb-10 sm:px-12">
+            <p className="max-w-[46ch] text-[12px] leading-relaxed text-white/50">
+              Rival ads read from where they are published. No spend, click or sales
+              estimates.
+            </p>
           </div>
         </div>
       </div>
