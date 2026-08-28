@@ -1,5 +1,21 @@
 # IOAA.AI
 
+**Latest build note:** The front page is fixed and now carries the product's real copy plus sign-in in place.
+
+Fix: the blank render was `Module not found: Can't resolve './scene.css'` from `src/app/page.tsx`. The source no longer referenced it, but the dev server's turbopack graph held the stale edge; cleared `.next/dev/cache/turbopack` and the orphaned `src_app_scene_*.css` chunks. Those two page-level rules live at the END of `src/app/globals.css`, scoped `html:has([data-scene-root])` / `body:has([data-scene-root])`. No local CSS import on any page now, no second `:root`.
+
+Copy: the scene was still running the fictional VECTRUS energy-company text. All three beats are now IOAA.AI's own — beat 1 "See the ads your market is running", beat 2 the website → approve rivals → evidence sequence, beat 3 the ask. The nav's five fake property names became three real section markers ("What it reads" / "How it works" / "Sign in") that scrub the scene to the beat they name via `onBeat`, so nothing is a dead link. The no-estimates disclaimer (reach ranges only; no spend/clicks/sales) is on the scene now, not just the workspace.
+
+Sign-in moved ONTO the landing page: `src/components/scene/scene-sign-in.tsx` renders in beat 3 — email + password, magic link, and Google gated on `googleSignInEnabled` from `src/lib/auth`. `src/app/page.tsx` is now async, reads `getUser()` and passes `signedIn` + `googleEnabled` down; a signed-in visitor gets "Open your workspace" instead of the form, in both the beat and the nav. `active={s3Opacity > 0.6}` gates pointer events so the invisible card never swallows scroll. `src/app/start/page.tsx` no longer holds a sign-in panel — signed-out visitors there `redirect("/")`; `src/components/auth/sign-in-panel.tsx` is deleted. Types clean.
+
+# IOAA.AI
+
+**Latest build note:** Sign-in was broken because the app could not reach its own Supabase database, and the fix is in `src/db/index.ts` + `drizzle.config.ts`. Two compounding faults: `SUPABASE_DATABASE_URL` pointed at the DIRECT endpoint `db.<ref>.supabase.co:5432`, which resolves IPv6-only while the runtime has no IPv6 route (every connect died `ENETUNREACH`); and the pooler's cert is signed by Supabase's own CA, which node-postgres 8.22 rejects under `sslmode=require`. `src/db/index.ts` now rewrites any `db.<ref>.supabase.co` URL onto the transaction pooler (`SUPABASE_POOLER_HOST`, default `aws-0-us-east-1.pooler.supabase.com`, port 6543, username `postgres.<ref>`), uses port 5432 in session mode for `directUrl()`, and passes `ssl: { rejectUnauthorized: false }` for Supabase hosts only. `drizzle.config.ts` applies the same session-mode rewrite. Verified through the app's exact connection path: 3 users, 8 runs.
+
+Supabase project `nunkiwiwzodhgxkwpkpz` (`admirror`, us-east-1, ACTIVE_HEALTHY) is confirmed the live source of truth — all 25 tables present and MORE data than the platform database. Do not fall back to `IMAGINE_DATABASE_URL`.
+
+# IOAA.AI
+
 **Latest build note:** Sign-in now lives ON the front door, and the scene carries the PRODUCT's copy instead of the placeholder energy-company text.
 
 Two faults fixed first: `src/app/page.tsx` no longer imports a local `./scene.css` (those two `:has([data-scene-root])` rules now sit at the END of `src/app/globals.css`, no new `:root`), and the turbopack dev cache that still held the stale module graph (`.next/dev/cache/turbopack`, plus the orphan `src_app_scene_*.css` chunks) was cleared — that cache, not the source, was what kept re-reporting `Module not found: Can't resolve './scene.css'` on `/` AND `/start`.
