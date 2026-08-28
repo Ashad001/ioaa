@@ -407,7 +407,7 @@ export function EvidenceBoard({
                   side="top"
                   align="end"
                   sideOffset={10}
-                  className="max-h-[60dvh] w-[360px] overflow-y-auto bg-transparent p-0 shadow-xl ring-0"
+                  className="max-h-[60dvh] w-[360px] overflow-y-auto p-0 shadow-xl"
                 >
                   <MatrixPicker
                     choice={matrix}

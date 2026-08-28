@@ -69,7 +69,7 @@ export function MatrixPicker({
   const size = resolutionSpec(choice.resolution);
 
   return (
-    <div className="min-w-0 rounded-sm border border-border bg-rack-rail/60">
+    <div className="min-w-0 rounded-sm border border-border bg-rack-rail">
       <header className="flex min-w-0 flex-wrap items-center justify-between gap-2 border-b border-border/70 px-3.5 py-2.5">
         <Plate className="min-w-0 truncate">What gets made</Plate>
         <span
