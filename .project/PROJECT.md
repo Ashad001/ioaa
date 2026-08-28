@@ -1,5 +1,9 @@
 # AdMirror
 
+**Latest build note:** The make-ads press now explains itself. When it is unavailable, a red line sits directly beneath it naming the numbers and the way out — "30 assets from 5 angles — over the 12 cap for one press. Pick fewer angles, or turn off the customer-filmed cut." — with a link that opens the spec sheet, and "Pick at least one angle" when nothing is ticked. The cap and the pricing are unchanged; only the explanation was missing. The decision bar stays capped to under half the viewport and scrolls inside itself, so an open spec sheet can never cover the frames.
+
+# AdMirror
+
 **Latest build note:** The angles board is readable again. The decision bar at the bottom is capped and scrolls inside itself, and the "what gets made" spec sheet is folded away behind one press instead of standing open — so the frames above keep their space. Copy-only ads (most of what a pasted Library page yields) now size to their own words instead of holding a picture's 4:5 frame, so a board of seventy text ads is a tight grid rather than a column of tall empty boxes. Frames with real artwork or video keep the 4:5 contact-sheet crop.
 
 # AdMirror

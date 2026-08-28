@@ -38,6 +38,7 @@ import { PLATFORM_LABELS } from "@/lib/admirror/ad-library";
 import {
   DEFAULT_MATRIX,
   describeSpec,
+  MATRIX_CAP,
   priceMatrix,
   type MatrixChoice,
 } from "@/lib/admirror/matrix";
@@ -141,6 +142,31 @@ export function EvidenceBoard({
 
   const inspectingItem = items.find((item) => item.id === inspecting) ?? null;
   const cost = priceMatrix(matrix, Math.max(1, selectedItemIds.length));
+
+  /**
+   * WHY THE PRESS IS UNAVAILABLE — stated next to the press itself.
+   *
+   * The cap is correct and stays exactly where it is. What was missing was its
+   * explanation: the only place the numbers appeared was inside the spec sheet,
+   * which is folded by default, so a greyed-out button with no reason beside it
+   * read as a broken app rather than a decision the user can fix in one move.
+   * Every reason therefore names the numbers AND the way out.
+   */
+  const blockedReason =
+    selectedItemIds.length === 0
+      ? "Pick at least one angle — tick a frame above and the press opens."
+      : cost.overCap
+        ? [
+            `${cost.total} assets from ${selectedItemIds.length} angle${
+              selectedItemIds.length === 1 ? "" : "s"
+            } — over the ${MATRIX_CAP} cap for one press.`,
+            matrix.contrastFormat
+              ? "Pick fewer angles, or turn off the customer-filmed cut."
+              : matrix.includeStatics
+                ? "Pick fewer angles, or turn off the statics."
+                : "Pick fewer angles.",
+          ].join(" ")
+        : null;
   const withArt = items.filter((item) => Boolean(item.creativeUrl ?? item.artefactUrl)).length;
 
   return (
@@ -400,7 +426,8 @@ export function EvidenceBoard({
                   <Button
                     size="lg"
                     className="shrink-0"
-                    disabled={pending || selectedItemIds.length === 0 || cost.overCap}
+                    disabled={pending || Boolean(blockedReason)}
+                    aria-describedby={blockedReason ? "gate-blocked-reason" : undefined}
                     onClick={() =>
                       startTransition(async () => {
                         const result = await forceGeneration({
@@ -422,6 +449,26 @@ export function EvidenceBoard({
                     {pending ? "Writing your ads…" : "Make my ads from these"}
                   </Button>
                 </div>
+
+                {/* The reason sits with the press, not behind a fold. */}
+                {blockedReason ? (
+                  <p
+                    id="gate-blocked-reason"
+                    role="status"
+                    className="w-full min-w-0 text-[12px] leading-relaxed text-lamp-alert"
+                  >
+                    {blockedReason}
+                    {cost.overCap && !specOpen ? (
+                      <button
+                        type="button"
+                        onClick={() => setSpecOpen(true)}
+                        className="ml-1.5 underline decoration-lamp-alert/60 underline-offset-2 transition-colors hover:text-foreground"
+                      >
+                        Open what gets made
+                      </button>
+                    ) : null}
+                  </p>
+                ) : null}
               </div>
 
               {specOpen ? (
