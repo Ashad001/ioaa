@@ -1,5 +1,13 @@
 # IOAA.AI
 
+**Latest build note:** Sign-in was broken because the app could not reach its own Supabase database, and the fix is in `src/db/index.ts` + `drizzle.config.ts`. Two compounding faults: `SUPABASE_DATABASE_URL` pointed at the DIRECT endpoint `db.<ref>.supabase.co:5432`, which resolves IPv6-only while the runtime has no IPv6 route (every connect died `ENETUNREACH`); and the pooler's cert is signed by Supabase's own CA, which node-postgres 8.22 rejects under `sslmode=require`. `src/db/index.ts` now rewrites any `db.<ref>.supabase.co` URL onto the transaction pooler (`SUPABASE_POOLER_HOST`, default `aws-0-us-east-1.pooler.supabase.com`, port 6543, username `postgres.<ref>`), uses port 5432 in session mode for `directUrl()`, and passes `ssl: { rejectUnauthorized: false }` for Supabase hosts only. `drizzle.config.ts` applies the same session-mode rewrite. Verified through the app's exact connection path: 3 users, 8 runs.
+
+Supabase project `nunkiwiwzodhgxkwpkpz` (`admirror`, us-east-1, ACTIVE_HEALTHY) is confirmed the live source of truth — all 25 tables present and MORE data than the platform database. Do not fall back to `IMAGINE_DATABASE_URL`.
+
+The front-door scene now has ONE real destination so nothing pretends to work: the desktop and overlay nav carry an `IOAA.AI ↗` link to `/start`, and the section-3 CTA became a `Link` to `/start` reading "Open IOAA.AI". The five fictional `VECTRUS *` property names had `href="#"`; they are now plain `<span>`s (dead links removed rather than faked), as are the `NEWS`/`CONTACT` labels. The scrub engine, beat timings and nav inversion are untouched.
+
+# IOAA.AI
+
 **Latest build note:** The cinematic scroll-tied scene is now the SITE'S FRONT DOOR at `/`. `src/app/page.tsx` renders it (metadata title absolute "Scroll Tied Video Section", the Helvetica Neue ME `<link>`, `data-scene-root` subtree font, `src/app/scene.css` moved up out of the deleted `src/app/scene/` folder). Only one page still resolves to `/`.
 
 The workspace app moved intact to `/start` (`src/app/start/page.tsx` — sign-in panel + market brief when signed out, intake form when signed in). Everything that used to point at `/` now points at `/start`: every `redirect("/")` guard across library, patterns, results, watch, and all `runs/[id]/*` routes; the "New analysis" link in `src/components/rack/shell.tsx`; the empty-state buttons on library, results and watch; the fallback link on `/auth/complete`; the `after` default in `signInWithGoogle`; and the `after` fallback in `/auth/start`. `sitemap.ts` lists `/` and `/start`. Magic-link and post-sign-in pushes already went to `/library` and were left alone.

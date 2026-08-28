@@ -12,6 +12,7 @@
  * are pale cloud, which carries navy type, and the later frames are dark, which
  * carry white. The nav inverts at the same crossover.
  */
+import Link from "next/link";
 import { ArrowDown, ArrowRight, ChevronUp } from "lucide-react";
 
 import { SceneNav } from "@/components/scene/scene-nav";
@@ -209,19 +210,21 @@ export function ScrollScene() {
                 </h2>
               </Stagger>
               <Stagger show={s3Opacity > 0.3} delay={300}>
-                <div className="pointer-events-auto flex items-center gap-4">
-                  <span className="text-sm uppercase tracking-[0.3em] text-white/80">
-                    Contact Nordvik
+                <Link
+                  href="/start"
+                  className="pointer-events-auto group flex min-w-0 items-center gap-4"
+                >
+                  <span className="truncate text-sm uppercase tracking-[0.3em] text-white/80 transition-colors group-hover:text-white">
+                    Open IOAA.AI
                   </span>
-                  <button
-                    type="button"
-                    aria-label="Contact Nordvik"
-                    className="flex items-center justify-center rounded-full bg-white text-gray-800 transition-transform duration-300 hover:scale-110"
+                  <span
+                    aria-hidden
+                    className="flex shrink-0 items-center justify-center rounded-full bg-white text-gray-800 transition-transform duration-300 group-hover:scale-110"
                     style={{ width: 40, height: 40 }}
                   >
                     <ArrowRight size={16} strokeWidth={1.6} />
-                  </button>
-                </div>
+                  </span>
+                </Link>
               </Stagger>
             </div>
           </section>

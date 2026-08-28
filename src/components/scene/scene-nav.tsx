@@ -10,9 +10,14 @@
  *
  * Below the large breakpoint the links collapse into a hamburger that opens a
  * full-screen panel; the desk-width row is never allowed to wrap.
+ *
+ * The five property names are the scene's own fictional copy and carry no
+ * destination, so they are rendered as plain type rather than as links that go
+ * nowhere. The one real destination on this page is the workspace entry.
  */
 import { useEffect, useState } from "react";
-import { Info, X } from "lucide-react";
+import Link from "next/link";
+import { ArrowUpRight, Info, X } from "lucide-react";
 
 const DARK = "#1D3045";
 
@@ -71,10 +76,9 @@ export function SceneNav({ isLight }: { isLight: boolean }) {
 
         <div className="hidden min-w-0 items-center gap-8 lg:flex xl:gap-10">
           {LINKS.map((link, index) => (
-            <a
+            <span
               key={link.label}
-              href="#"
-              className="relative shrink-0 text-xs font-medium uppercase tracking-[0.15em] transition-opacity hover:opacity-70"
+              className="relative shrink-0 text-xs font-medium uppercase tracking-[0.15em]"
               style={entrance(index)}
             >
               {link.label}
@@ -85,12 +89,12 @@ export function SceneNav({ isLight }: { isLight: boolean }) {
                   style={{ height: 2, background: color, transition: "background 500ms" }}
                 />
               ) : null}
-            </a>
+            </span>
           ))}
         </div>
 
-        <div className="hidden min-w-0 items-center gap-8 sm:flex" style={entrance(5)}>
-          <span className="flex shrink-0 items-center gap-2 text-xs font-medium uppercase tracking-[0.2em]">
+        <div className="flex min-w-0 items-center gap-6 sm:gap-8" style={entrance(5)}>
+          <span className="hidden shrink-0 items-center gap-2 text-xs font-medium uppercase tracking-[0.2em] sm:flex">
             NEWS
             <span
               className="flex items-center justify-center rounded-full"
@@ -105,9 +109,13 @@ export function SceneNav({ isLight }: { isLight: boolean }) {
               <Info size={10} strokeWidth={2} />
             </span>
           </span>
-          <span className="hidden shrink-0 text-xs font-medium uppercase tracking-[0.2em] lg:inline">
-            MENU
-          </span>
+          <Link
+            href="/start"
+            className="flex min-w-0 shrink-0 items-center gap-1.5 text-xs font-medium uppercase tracking-[0.2em] transition-opacity hover:opacity-70"
+          >
+            <span className="truncate">IOAA.AI</span>
+            <ArrowUpRight size={13} strokeWidth={1.8} />
+          </Link>
           <button
             type="button"
             onClick={() => setMenuOpen(true)}
@@ -148,12 +156,10 @@ export function SceneNav({ isLight }: { isLight: boolean }) {
 
           <div className="flex min-h-0 flex-1 flex-col justify-center px-8 sm:px-12">
             {LINKS.map((link, index) => (
-              <a
+              <span
                 key={link.label}
-                href="#"
-                onClick={() => setMenuOpen(false)}
-                className={`min-w-0 py-3 text-2xl font-light uppercase tracking-wide transition-colors sm:text-3xl ${
-                  link.active ? "text-white" : "text-white/60 hover:text-white"
+                className={`min-w-0 py-3 text-2xl font-light uppercase tracking-wide sm:text-3xl ${
+                  link.active ? "text-white" : "text-white/60"
                 }`}
                 style={{
                   opacity: menuOpen ? 1 : 0,
@@ -162,8 +168,22 @@ export function SceneNav({ isLight }: { isLight: boolean }) {
                 }}
               >
                 {link.label}
-              </a>
+              </span>
             ))}
+
+            <Link
+              href="/start"
+              onClick={() => setMenuOpen(false)}
+              className="mt-8 flex min-w-0 items-center gap-2 py-3 text-2xl font-light uppercase tracking-wide text-white sm:text-3xl"
+              style={{
+                opacity: menuOpen ? 1 : 0,
+                transform: menuOpen ? "translateY(0)" : "translateY(20px)",
+                transition: `opacity 500ms cubic-bezier(0.16,1,0.3,1) ${LINKS.length * 60}ms, transform 500ms cubic-bezier(0.16,1,0.3,1) ${LINKS.length * 60}ms`,
+              }}
+            >
+              <span className="truncate">IOAA.AI</span>
+              <ArrowUpRight size={22} strokeWidth={1.4} />
+            </Link>
           </div>
 
           <div className="flex items-center gap-8 px-8 pb-10 sm:px-12">

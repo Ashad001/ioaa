@@ -13,6 +13,32 @@ import type { Config } from "drizzle-kit";
  * them — the pooled one on port 6543. The session endpoint is the same host on
  * 5432, so it is derived here rather than requested twice.
  */
+/**
+ * Point a Supabase connection string at the pooler in SESSION mode.
+ *
+ * The project's direct endpoint (`db.<ref>.supabase.co`) is IPv6-only and this
+ * runtime has no IPv6 route, so a push against it fails to connect at all. The
+ * pooler is reachable; session mode (port 5432) gives schema changes the
+ * session-level connection they need, and the pooler wants the username
+ * tenant-qualified as `postgres.<ref>`. Mirrors `src/db/index.ts`.
+ */
+function toSessionPooler(raw: string): string {
+  let url: URL;
+  try {
+    url = new URL(raw);
+  } catch {
+    return raw;
+  }
+  const match = url.hostname.toLowerCase().match(/^db\.([a-z0-9]+)\.supabase\.co$/);
+  if (!match) return raw.replace(":6543/", ":5432/");
+
+  url.hostname =
+    process.env.SUPABASE_POOLER_HOST ?? "aws-0-us-east-1.pooler.supabase.com";
+  url.port = "5432";
+  if (url.username === "postgres") url.username = `postgres.${match[1]}`;
+  return url.toString();
+}
+
 function schemaUrl(): string {
   const explicitDirect =
     process.env.SUPABASE_DATABASE_URL_UNPOOLED ??
@@ -21,9 +47,8 @@ function schemaUrl(): string {
 
   const ownPooled = process.env.SUPABASE_DATABASE_URL;
   if (ownPooled) {
-    return (
-      process.env.SUPABASE_DATABASE_URL_UNPOOLED ??
-      ownPooled.replace(":6543/", ":5432/")
+    return toSessionPooler(
+      process.env.SUPABASE_DATABASE_URL_UNPOOLED ?? ownPooled,
     );
   }
 

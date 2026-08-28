@@ -34,6 +34,69 @@ type Database = ReturnType<typeof drizzle<typeof schema>>;
 let instance: Database | null = null;
 
 /**
+ * Supabase's shared connection pooler.
+ *
+ * This is not a preference, it is the only address that works. A Supabase
+ * project's DIRECT endpoint (`db.<ref>.supabase.co`) resolves to an IPv6 address
+ * ONLY — projects on current plans get no dedicated IPv4 — and this app's runtime
+ * has no IPv6 route out, so every connection to it dies with ENETUNREACH before a
+ * single query is sent. That failure looks exactly like a broken app: sign-in
+ * fails with a generic error and nothing is wrong in the code. The pooler
+ * publishes A records, so it is reachable.
+ *
+ * The region is part of the pooler hostname and cannot be derived from the
+ * connection string, so it stays overridable for a project provisioned
+ * elsewhere. The default matches this app's project region.
+ */
+const supabasePoolerHost =
+  process.env.SUPABASE_POOLER_HOST ?? "aws-0-us-east-1.pooler.supabase.com";
+
+/** The project ref, if this hostname is a Supabase DIRECT endpoint. */
+function supabaseProjectRef(hostname: string): string | null {
+  const match = hostname.toLowerCase().match(/^db\.([a-z0-9]+)\.supabase\.co$/);
+  return match ? match[1] : null;
+}
+
+/**
+ * Rewrite a Supabase DIRECT connection string onto the pooler.
+ *
+ * Two things change and both are required: the host (see above) and the
+ * username, which the pooler needs tenant-qualified as `postgres.<ref>` so it
+ * knows which project a connection belongs to. `session` selects the pooler's
+ * session-mode port (5432) rather than transaction mode (6543) — schema changes
+ * need a session, ordinary queries do not.
+ *
+ * A string already pointed at a pooler, or at anything that is not Supabase, is
+ * returned untouched.
+ */
+function toReachableUrl(raw: string, session = false): string {
+  let url: URL;
+  try {
+    url = new URL(raw);
+  } catch {
+    return raw;
+  }
+
+  const ref = supabaseProjectRef(url.hostname);
+  if (!ref) return raw;
+
+  url.hostname = supabasePoolerHost;
+  url.port = session ? "5432" : "6543";
+  if (url.username === "postgres") url.username = `postgres.${ref}`;
+  return url.toString();
+}
+
+/** True when a connection string points at Supabase (direct or pooled). */
+function isSupabaseHost(raw: string): boolean {
+  try {
+    const { hostname } = new URL(raw);
+    return hostname.endsWith(".supabase.co") || hostname.endsWith(".supabase.com");
+  } catch {
+    return false;
+  }
+}
+
+/**
  * The app's connection string.
  *
  * `SUPABASE_DATABASE_URL` is checked FIRST: this app's data lives in the owner's
@@ -52,11 +115,10 @@ let instance: Database | null = null;
  * deploy it with the conventional variable set.
  */
 function connectionUrl(): string | undefined {
-  return (
-    process.env.SUPABASE_DATABASE_URL ??
-    process.env.IMAGINE_DATABASE_URL ??
-    process.env.DATABASE_URL
-  );
+  const ownProject = process.env.SUPABASE_DATABASE_URL;
+  if (ownProject) return toReachableUrl(ownProject);
+
+  return process.env.IMAGINE_DATABASE_URL ?? process.env.DATABASE_URL;
 }
 
 function connect(): Database {
@@ -71,6 +133,16 @@ function connect(): Database {
   instance = drizzle(
     new Pool({
       connectionString,
+      // Supabase's pooler presents a certificate signed by Supabase's own CA,
+      // which is not in the system trust store — and node-postgres now treats
+      // `sslmode=require` as full verification, so the handshake is rejected
+      // outright ("self-signed certificate in certificate chain") and no query
+      // ever runs. The connection stays encrypted; only the chain check is
+      // relaxed, which is what every Supabase pooler client does. Untouched for
+      // every other host.
+      ...(isSupabaseHost(connectionString)
+        ? { ssl: { rejectUnauthorized: false } }
+        : {}),
       // Small on purpose. The connection string points at a transaction pooler
       // that is already multiplexing for us, and a large per-instance pool just
       // holds server-side slots idle.
@@ -118,14 +190,15 @@ export const usingOwnDatabase = (): boolean =>
  *  asked for twice: a schema change needs a session connection that the
  *  transaction pooler cannot give it. */
 export const directUrl = (): string => {
-  const supplied =
-    process.env.SUPABASE_DATABASE_URL_UNPOOLED ??
-    process.env.IMAGINE_DATABASE_URL_UNPOOLED ??
-    process.env.DATABASE_URL_UNPOOLED;
-  if (supplied) return supplied;
+  const suppliedOwn = process.env.SUPABASE_DATABASE_URL_UNPOOLED;
+  if (suppliedOwn) return toReachableUrl(suppliedOwn, true);
 
-  const pooled = process.env.SUPABASE_DATABASE_URL;
-  if (pooled) return pooled.replace(":6543/", ":5432/");
+  const ownProject = process.env.SUPABASE_DATABASE_URL;
+  if (ownProject) return toReachableUrl(ownProject, true);
+
+  const supplied =
+    process.env.IMAGINE_DATABASE_URL_UNPOOLED ?? process.env.DATABASE_URL_UNPOOLED;
+  if (supplied) return supplied;
 
   return connectionUrl() ?? "";
 };
