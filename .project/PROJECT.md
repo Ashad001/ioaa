@@ -1,5 +1,9 @@
 # IOAA.AI
 
+**Latest build note:** The front page was rendering blank because it pulled in a separate stylesheet next to it (`src/app/scene.css`) that the dev server's module graph had gone stale on after the file moved out of the deleted `src/app/scene/` folder — `Module not found: Can't resolve './scene.css'` on every request. Fixed by deleting that one-off stylesheet and appending its two rules to the end of `src/app/globals.css`, still scoped with `html:has([data-scene-root])` / `body:has([data-scene-root])` so smooth scrolling and the white ground apply only while the scene is on screen and never leak into the workspace. `src/app/page.tsx` no longer imports any local CSS. No new `:root` block; palette untouched.
+
+# IOAA.AI
+
 **Latest build note:** Sign-in was broken because the app could not reach its own Supabase database, and the fix is in `src/db/index.ts` + `drizzle.config.ts`. Two compounding faults: `SUPABASE_DATABASE_URL` pointed at the DIRECT endpoint `db.<ref>.supabase.co:5432`, which resolves IPv6-only while the runtime has no IPv6 route (every connect died `ENETUNREACH`); and the pooler's cert is signed by Supabase's own CA, which node-postgres 8.22 rejects under `sslmode=require`. `src/db/index.ts` now rewrites any `db.<ref>.supabase.co` URL onto the transaction pooler (`SUPABASE_POOLER_HOST`, default `aws-0-us-east-1.pooler.supabase.com`, port 6543, username `postgres.<ref>`), uses port 5432 in session mode for `directUrl()`, and passes `ssl: { rejectUnauthorized: false }` for Supabase hosts only. `drizzle.config.ts` applies the same session-mode rewrite. Verified through the app's exact connection path: 3 users, 8 runs.
 
 Supabase project `nunkiwiwzodhgxkwpkpz` (`admirror`, us-east-1, ACTIVE_HEALTHY) is confirmed the live source of truth — all 25 tables present and MORE data than the platform database. Do not fall back to `IMAGINE_DATABASE_URL`.

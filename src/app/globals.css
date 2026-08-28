@@ -339,3 +339,14 @@ textarea {
 @utility loupe-sweeping {
   animation: loupe-sweep 1.6s var(--ease-in-out) infinite;
 }
+
+/* Page-level rules for the scroll-tied front-door scene. Scoped with :has() so the
+   rest of the workspace is untouched: they only apply while the scene is on screen. */
+html:has([data-scene-root]) {
+  scroll-behavior: smooth;
+}
+
+body:has([data-scene-root]) {
+  overflow-x: hidden;
+  background: #ffffff;
+}

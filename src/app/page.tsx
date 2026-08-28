@@ -7,12 +7,13 @@
  * The workspace itself lives at /start.
  *
  * The typeface is loaded with a plain <link> that React hoists into <head>, and it
- * is applied to this subtree only — the workspace keeps its own type.
+ * is applied to this subtree only — the workspace keeps its own type. The scene's
+ * page-level rules (smooth scrolling, white ground) live in globals.css, scoped to
+ * [data-scene-root] so they never leak into the workspace.
  */
 import type { Metadata } from "next";
 
 import { ScrollScene } from "@/components/scene/scroll-scene";
-import "./scene.css";
 
 export const metadata: Metadata = {
   title: { absolute: "Scroll Tied Video Section" },
