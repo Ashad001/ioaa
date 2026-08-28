@@ -128,8 +128,13 @@ export async function composeProfile(
   // Keep whatever the user has already edited into the profile — a rebuild
   // refreshes the READING, it does not overwrite their corrections.
   const kept = stored.profile as CompanyProfile | undefined;
+  const isEmptyFallback =
+    kept?.basis === "Corrected by you." &&
+    kept.siteUnreadable &&
+    kept.searchTerms.length === 0 &&
+    kept.sells.some((item) => item.startsWith("Not read from your site yet"));
   const merged: CompanyProfile =
-    kept && kept.basis === "Corrected by you."
+    kept && kept.basis === "Corrected by you." && !isEmptyFallback
       ? { ...profile, ...kept }
       : profile;
 

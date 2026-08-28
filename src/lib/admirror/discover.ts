@@ -17,6 +17,7 @@ import "server-only";
  */
 
 import { MARKET_PRESETS, type SearchSpec } from "./ad-library";
+import { readRenderedSite } from "./site-browser";
 import { readMany, type FeedState, type LiveAd } from "./library-feed";
 import { judge, marketVocabulary, type Candidate, type Verdict } from "./relevance";
 
@@ -305,19 +306,23 @@ export async function readSite(input: string): Promise<SiteRead> {
   const timer = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
 
   try {
-    const response = await fetch(url, {
-      cache: "no-store",
-      redirect: "follow",
-      signal: controller.signal,
-      headers: {
-        "User-Agent": UA,
-        Accept: "text/html,application/xhtml+xml",
-        "Accept-Language": "en-US,en;q=0.9",
-      },
-    });
+    let response: Response | null = null;
+    try {
+      response = await fetch(url, {
+        cache: "no-store",
+        redirect: "follow",
+        signal: controller.signal,
+        headers: {
+          "User-Agent": UA,
+          Accept: "text/html,application/xhtml+xml",
+          "Accept-Language": "en-US,en;q=0.9",
+        },
+      });
+    } catch {
+      // Some sites reject a direct machine request but render normally for a visitor.
+    }
 
-    if (!response.ok) throw new Error(`status-${response.status}`);
-    let html = (await response.text()).slice(0, 900_000);
+    let html = response?.ok ? (await response.text()).slice(0, 900_000) : "";
 
     // Some sites answer the bare domain with a redirect interstitial that has no
     // real copy in it. Follow the meta-refresh or the canonical once, otherwise
@@ -350,6 +355,16 @@ export async function readSite(input: string): Promise<SiteRead> {
         }
       }
     }
+
+    const staticProseLength = decode(stripTags(html)).length;
+    if (staticProseLength < 1_000) {
+      const rendered = await readRenderedSite(url);
+      if (rendered && decode(stripTags(rendered)).length > staticProseLength) {
+        html = rendered;
+      }
+    }
+
+    if (!html) throw new Error("site-unreadable");
 
     const title = meta(html, [
       /<meta[^>]+property=["']og:site_name["'][^>]+content=["']([^"']+)/i,
