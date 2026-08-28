@@ -1,5 +1,19 @@
 # IOAA.AI
 
+**Latest build note:** Preview was timing out (ReadTimeout, no response) with turbopack panicking on its own cache: `Failed to restore task data ... Unable to open static sorted file 00003929.sst ... No such file or directory`. Cause was my previous partial clear — deleting `.next/dev/cache/turbopack` while leaving the surrounding `.next` metadata behind left `.meta` files referencing `.sst` files that no longer existed, and every worker thread panicked on restore. Fix: removed the ENTIRE `.next` directory so the dev server rebuilds from scratch. Never delete a subset of that cache again — it is all or nothing.
+
+Hardening in the same pass: `src/app/page.tsx` reads the session through a local `currentUserOrNull()` that wraps `getUser()` in try/catch AND a 2.5s `Promise.race` timeout, falling back to `null` (i.e. signed-out, which renders the sign-in form). The front door is the page every visitor hits and needs nothing from the database to be worth showing, so a slow or unreachable database must degrade to the marketing page rather than hang it.
+
+Front door as it stands: three beats of IOAA.AI's own copy (beat 1 "See the ads your market is running", beat 2 website → approve rivals → evidence, beat 3 the ask), sign-in living IN beat 3 via `src/components/scene/scene-sign-in.tsx` (email+password, magic link, Google gated on `googleSignInEnabled`), `signedIn` swapping the form for "Open your workspace". `src/app/start/page.tsx` is intake only and redirects signed-out visitors to `/`; all 13 signed-out guards across the app point at `/`. Types clean.
+
+# IOAA.AI
+
+**Latest build note:** Sign-in was broken because the app could not reach its own Supabase database, and the fix is in `src/db/index.ts` + `drizzle.config.ts`. Two compounding faults: `SUPABASE_DATABASE_URL` pointed at the DIRECT endpoint `db.<ref>.supabase.co:5432`, which resolves IPv6-only while the runtime has no IPv6 route (every connect died `ENETUNREACH`); and the pooler's cert is signed by Supabase's own CA, which node-postgres 8.22 rejects under `sslmode=require`. `src/db/index.ts` now rewrites any `db.<ref>.supabase.co` URL onto the transaction pooler (`SUPABASE_POOLER_HOST`, default `aws-0-us-east-1.pooler.supabase.com`, port 6543, username `postgres.<ref>`), uses port 5432 in session mode for `directUrl()`, and passes `ssl: { rejectUnauthorized: false }` for Supabase hosts only. `drizzle.config.ts` applies the same session-mode rewrite. Verified through the app's exact connection path: 3 users, 8 runs.
+
+Supabase project `nunkiwiwzodhgxkwpkpz` (`admirror`, us-east-1, ACTIVE_HEALTHY) is confirmed the live source of truth — all 25 tables present and MORE data than the platform database. Do not fall back to `IMAGINE_DATABASE_URL`.
+
+# IOAA.AI
+
 **Latest build note:** The front page is fixed and now carries the product's real copy plus sign-in in place.
 
 Fix: the blank render was `Module not found: Can't resolve './scene.css'` from `src/app/page.tsx`. The source no longer referenced it, but the dev server's turbopack graph held the stale edge; cleared `.next/dev/cache/turbopack` and the orphaned `src_app_scene_*.css` chunks. Those two page-level rules live at the END of `src/app/globals.css`, scoped `html:has([data-scene-root])` / `body:has([data-scene-root])`. No local CSS import on any page now, no second `:root`.
