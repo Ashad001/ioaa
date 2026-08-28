@@ -1,5 +1,15 @@
 # IOAA.AI
 
+**Latest build note:** A standalone cinematic scroll-scene page now lives at `/scene`, built exactly to the supplied spec and deliberately isolated from the workspace app — its own typeface (Helvetica Neue ME via the supplied web-font link), its own light palette (navy `#1D3045` on pale footage), no rack shell, no workspace tokens, no route in the main nav.
+
+Structure: a 500vh scroll track with one sticky full-viewport scene. The CloudFront mp4 is NEVER played — scroll position drives the playhead. `src/lib/scroll-scene/use-video-scrub.ts` fetches the mp4 once, demuxes it with mp4box@0.5.2, decodes every frame through WebCodecs `VideoDecoder`, re-encodes each as a webp blob keyed by presentation timestamp, and paints the nearest frame to the eased playhead onto a 1920×1080 canvas (binary-search nearest index, 24-bitmap LRU, LEAD=24 decode/encode throttle, hardware→software retry, 60s watchdog). The playhead uses an exponential lerp (TAU 8, SNAP 0.002) so a flicked wheel glides. Fallbacks: reduced motion, no `VideoDecoder`, decode failure or watchdog expiry all revert to `video.currentTime` seeking with the canvas hidden.
+
+Three text beats fade in strict sequence (1: p<0.20 hold then clear; 2: 0.32→0.55; 3: from 0.67), each child rising 24px on an expo-out curve. The nav inverts navy→white at p>0.55, enters once at 200ms with an 80ms-per-link offset, and collapses below the large breakpoint into a hamburger that opens a full-screen navy panel.
+
+`mp4box@0.5.2` was added as a dependency; `src/types/mp4box.d.ts` types the surface used. Nothing in the existing app was touched — the copy on the scene is the supplied fictional energy brand, so it is not wired to IOAA.AI's own routes and its nav links and CTAs are inert by design.
+
+# IOAA.AI
+
 **Latest build note:** The product is now called IOAA.AI (formerly AdMirror). The name was changed everywhere it appears to a user — the header wordmark (IOAA with a tinted .AI), the browser/tab title and share description, the sign-in panel, and every explanatory line across the run, collect, board, results, patterns, watch and library screens. No feature, query, route or data changed; internal module folder names were left as-is since they are never shown.
 
 # AdMirror
