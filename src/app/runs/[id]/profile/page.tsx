@@ -51,7 +51,7 @@ const PLACEHOLDER = /^(category leader|nearest challenger|attention competitor)$
 export default async function ProfilePage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const user = await getUser();
-  if (!user) redirect("/");
+  if (!user) redirect("/start");
 
   const current = await getRun(id, user.id);
   if (!current) notFound();

@@ -18,7 +18,7 @@ export const metadata = {
 
 export default async function PatternsPage() {
   const user = await getUser();
-  if (!user) redirect("/");
+  if (!user) redirect("/start");
 
   const rows = await getPatterns(user.id);
 

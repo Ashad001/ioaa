@@ -75,7 +75,7 @@ export default function AuthComplete() {
       {failure ? (
         <div style={{ maxWidth: "26rem", display: "grid", gap: "1rem" }}>
           <p style={{ margin: 0 }}>{failure}</p>
-          <Link href="/" style={{ color: "inherit" }}>
+          <Link href="/start" style={{ color: "inherit" }}>
             Back to the app
           </Link>
         </div>

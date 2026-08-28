@@ -14,7 +14,7 @@ import { getGate, getItems, getRun, getSteps, getVariants } from "@/lib/admirror
 export default async function CreativePage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const user = await getUser();
-  if (!user) redirect("/");
+  if (!user) redirect("/start");
 
   const current = await getRun(id, user.id);
   if (!current) notFound();

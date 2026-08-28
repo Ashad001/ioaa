@@ -28,7 +28,7 @@ function stamp(date: Date | null) {
 
 export default async function WatchtowerIndexPage() {
   const user = await getUser();
-  if (!user) redirect("/");
+  if (!user) redirect("/start");
 
   const [watches, runs] = await Promise.all([
     listWatchesForUser(user.id),
@@ -102,7 +102,7 @@ export default async function WatchtowerIndexPage() {
                   ))}
                 </div>
               ) : (
-                <Button className="mt-4" render={<Link href="/" />}>
+                <Button className="mt-4" render={<Link href="/start" />}>
                   <span className="min-w-0 truncate">Start a run</span>
                 </Button>
               )}

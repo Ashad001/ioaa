@@ -1,5 +1,13 @@
 # IOAA.AI
 
+**Latest build note:** The cinematic scroll-tied scene is now the SITE'S FRONT DOOR at `/`. `src/app/page.tsx` renders it (metadata title absolute "Scroll Tied Video Section", the Helvetica Neue ME `<link>`, `data-scene-root` subtree font, `src/app/scene.css` moved up out of the deleted `src/app/scene/` folder). Only one page still resolves to `/`.
+
+The workspace app moved intact to `/start` (`src/app/start/page.tsx` — sign-in panel + market brief when signed out, intake form when signed in). Everything that used to point at `/` now points at `/start`: every `redirect("/")` guard across library, patterns, results, watch, and all `runs/[id]/*` routes; the "New analysis" link in `src/components/rack/shell.tsx`; the empty-state buttons on library, results and watch; the fallback link on `/auth/complete`; the `after` default in `signInWithGoogle`; and the `after` fallback in `/auth/start`. `sitemap.ts` lists `/` and `/start`. Magic-link and post-sign-in pushes already went to `/library` and were left alone.
+
+The scene's own machinery is unchanged from the previous turn (500vh track, sticky scene, WebCodecs frame bank + exponential lerp scrub, three sequential text beats, navy→white nav inversion at p>0.55, hamburger overlay below the large breakpoint). Its nav links and two CTAs are inert by design — the copy is the supplied fictional energy brand, not IOAA.AI's own routes.
+
+# IOAA.AI
+
 **Latest build note:** A standalone cinematic scroll-scene page now lives at `/scene`, built exactly to the supplied spec and deliberately isolated from the workspace app — its own typeface (Helvetica Neue ME via the supplied web-font link), its own light palette (navy `#1D3045` on pale footage), no rack shell, no workspace tokens, no route in the main nav.
 
 Structure: a 500vh scroll track with one sticky full-viewport scene. The CloudFront mp4 is NEVER played — scroll position drives the playhead. `src/lib/scroll-scene/use-video-scrub.ts` fetches the mp4 once, demuxes it with mp4box@0.5.2, decodes every frame through WebCodecs `VideoDecoder`, re-encodes each as a webp blob keyed by presentation timestamp, and paints the nearest frame to the eased playhead onto a 1920×1080 canvas (binary-search nearest index, 24-bitmap LRU, LEAD=24 decode/encode throttle, hardware→software retry, 60s watchdog). The playhead uses an exponential lerp (TAU 8, SNAP 0.002) so a flicked wheel glides. Fallbacks: reduced motion, no `VideoDecoder`, decode failure or watchdog expiry all revert to `video.currentTime` seeking with the canvas hidden.

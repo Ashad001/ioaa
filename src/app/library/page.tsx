@@ -26,7 +26,7 @@ const STATUS_COPY: Record<string, { label: string; lamp: "live" | "hold" | "cold
 
 export default async function LibraryPage() {
   const user = await getUser();
-  if (!user) redirect("/");
+  if (!user) redirect("/start");
 
   const [runs, watched] = await Promise.all([
     listRunsForUser(user.id),
@@ -61,7 +61,7 @@ export default async function LibraryPage() {
           <Button variant="ghost" size="sm" render={<Link href="/patterns" />}>
             <span className="min-w-0 truncate">Patterns</span>
           </Button>
-          <Button size="sm" render={<Link href="/" />}>
+          <Button size="sm" render={<Link href="/start" />}>
             <Plus size={14} strokeWidth={1.8} />
             <span className="min-w-0 truncate">New run</span>
           </Button>
@@ -79,7 +79,7 @@ export default async function LibraryPage() {
                 Start with your brand and the country you sell in. IOAA.AI maps the competition and hands
                 you the searches to open.
               </p>
-              <Button className="mt-4" render={<Link href="/" />}>Start your first run</Button>
+              <Button className="mt-4" render={<Link href="/start" />}>Start your first run</Button>
             </div>
           ) : (
             <div className="divide-y divide-border overflow-hidden rounded-sm border border-border">

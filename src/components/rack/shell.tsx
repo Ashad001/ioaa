@@ -72,7 +72,7 @@ export function RackShell({
             <div className="flex-1" />
           )}
           <Link
-            href="/"
+            href="/start"
             className="flex shrink-0 items-center gap-1 text-[10px] font-medium text-muted-foreground transition-colors duration-150 ease-out hover:text-primary"
           >
             New analysis <ArrowUpRight size={11} strokeWidth={1.7} />

@@ -83,7 +83,7 @@ export const {
  *     setError(e instanceof Error ? e.message : "Sign-in failed. Please try again.");
  *   }
  */
-export async function signInWithGoogle(after: string = "/"): Promise<void> {
+export async function signInWithGoogle(after: string = "/start"): Promise<void> {
   // Open the popup to a page on THIS app's origin that starts the flow itself.
   // Running the whole flow inside the popup keeps it entirely first-party: the
   // state cookie Better Auth sets when starting and checks at the callback are

@@ -54,7 +54,7 @@ function stamp(date: Date | null) {
 
 export default async function ResultsPage() {
   const user = await getUser();
-  if (!user) redirect("/");
+  if (!user) redirect("/start");
 
   const [shipped, baselineRow, runs, acceptedRow, openRow, refitSamples] = await Promise.all([
     listShippedForUser(user.id),
@@ -222,7 +222,7 @@ export default async function ResultsPage() {
                         ))}
                       </div>
                     ) : (
-                      <Button className="mt-4" render={<Link href="/" />}>
+                      <Button className="mt-4" render={<Link href="/start" />}>
                         <span className="min-w-0 truncate">Start a run</span>
                       </Button>
                     )}

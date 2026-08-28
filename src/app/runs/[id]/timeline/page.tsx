@@ -30,7 +30,7 @@ export default async function TimelinePage({
   const { id } = await params;
   const { a, b } = await searchParams;
   const user = await getUser();
-  if (!user) redirect("/");
+  if (!user) redirect("/start");
 
   const current = await getRun(id, user.id);
   if (!current) notFound();
